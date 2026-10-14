@@ -1,0 +1,17 @@
+{
+  "name": "Regency Events Backstage",
+  "short_name": "Backstage",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#050806",
+  "theme_color": "#050806",
+  "description": "Regency Events live event operations: jobs, crew, equipment, vehicles, safety and event production.",
+  "icons": [
+    {
+      "src": "./regency-app-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
