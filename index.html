@@ -2566,6 +2566,8 @@ body.light-theme .hire-range-picker{background:#f8fafc!important;color:#17202a!i
   function apply(mode){
     const light=mode==='light';
     document.body.classList.toggle('light-theme',light);
+    const bannerImage=document.querySelector('.app-header-banner');
+    if(bannerImage){bannerImage.src=light?'regency-banner-day.png':'regency-banner.png';}
     const control=document.getElementById('themeFaderControl');
     if(control){control.dataset.mode=light?'light':'dark';control.setAttribute('aria-label',light?'Light theme selected. Move fader up for dark mode.':'Dark theme selected. Move fader down for light mode.');const label=control.querySelector('.tf-mode');if(label)label.textContent=light?'LIGHT':'DARK';}
     const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',light?'#f3f6f9':'#101713');
