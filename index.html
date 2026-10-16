@@ -503,6 +503,34 @@ body.light-theme #themeFaderControl .tf-mode{color:#087c42!important}
 @media(min-width:900px){#themeFaderControl{top:10px!important;left:10px!important}}
 </style>
 
+
+<style id="v69-job-workflow-status">.job-workflow-status{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;font-weight:800;font-size:12px;white-space:nowrap}.job-summary-sub{overflow-wrap:anywhere}</style>
+
+
+<style id="v69-mobile-theme-control">
+#themeFaderControl{display:flex!important;align-items:flex-start!important;gap:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;max-width:none!important;}
+#themeFaderControl .tf-compact{display:none;align-items:center;justify-content:center;width:42px;height:42px;padding:0!important;border:1px solid #00a955!important;border-radius:50%!important;background:rgba(5,13,9,.92)!important;color:#00e878!important;box-shadow:0 2px 8px #0008!important;cursor:pointer;touch-action:manipulation;}
+#themeFaderControl .tf-compact svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;}
+#themeFaderControl .tf-panel{display:flex;align-items:center;gap:5px;padding:4px 6px;border:1px solid #3c6650;border-radius:9px;background:rgba(5,13,9,.92);box-shadow:0 2px 7px #0008;color:#f2fff7;font:700 9px/1 system-ui,sans-serif;letter-spacing:.6px;}
+#themeFaderControl .tf-label{font-size:8px!important;opacity:.85!important;}
+#themeFaderControl .tf-mode{font-size:8px!important;min-width:28px!important;color:#00e878!important;}
+#themeFaderControl .tf-track{position:relative!important;width:27px!important;height:44px!important;min-height:44px!important;padding:0!important;margin:0!important;border:2px solid #00a955!important;border-radius:7px!important;background:linear-gradient(90deg,#101b14,#155c36 50%,#101b14)!important;box-shadow:inset 0 0 4px #000!important;display:block!important;flex:0 0 27px!important;touch-action:manipulation;}
+#themeFaderControl .tf-knob{position:absolute!important;left:2px!important;top:2px!important;width:19px!important;height:15px!important;border-radius:4px!important;border:1px solid #d7e0dc!important;background:linear-gradient(#fff,#d6dfdb 48%,#9aa8a2)!important;box-shadow:0 2px 3px #0009!important;transition:top .16s ease!important;}
+#themeFaderControl[data-mode="light"] .tf-knob{top:23px!important;}
+body.light-theme #themeFaderControl .tf-panel{background:rgba(255,255,255,.96);color:#163322;border-color:#8bb9a0;}
+body.light-theme #themeFaderControl .tf-mode{color:#087c42!important;}
+@media(max-width:600px){
+ #themeFaderControl{top:5px!important;left:5px!important;transform:none!important;display:flex!important;}
+ #themeFaderControl .tf-compact{display:flex!important;}
+ #themeFaderControl .tf-panel{display:none!important;margin-left:6px;}
+ #themeFaderControl.tf-expanded .tf-panel{display:flex!important;}
+}
+@media(min-width:601px){
+ #themeFaderControl{top:10px!important;left:10px!important;}
+ #themeFaderControl .tf-compact{display:none!important;}
+ #themeFaderControl .tf-panel{display:flex!important;}
+}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Crew login and switch"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1423,20 +1451,42 @@ function jobProgressBar(j){
  ).join('')+'</div>';
 }
 
+function getOperationalJobStatus(j){
+ const attached=(data.items||[]).filter(i=>String(i.jobId)===String(j.id));
+ const history=j.equipmentHistory||[];const historical=[];const seen=new Set();
+ history.forEach(run=>(run.items||[]).forEach(i=>{const k=String(i.id||i.asset||i.name);if(!seen.has(k)){seen.add(k);historical.push(i)}}));
+ const hadEquipment=attached.length>0||historical.length>0;
+ const end=String(j.endDate||j.date||'').slice(0,10);
+ const today=new Date().toISOString().slice(0,10);
+ if(j.status==='Complete'||(hadEquipment&&attached.length===0)){if(j.status!=='Complete'){j.status='Complete';save()}return {label:'Closed',color:'#F04444',closed:true,attached,hadEquipment};}
+ if(end&&end<today&&attached.length){
+   addNotification('warning','Job needs packdown',`${j.name} has passed its end date and ${attached.length} item${attached.length===1?' remains':'s remain'} unreturned.`, `job-packdown-${j.id}`);
+   return {label:'Packdown',color:'#F5AD32',closed:false,attached,hadEquipment};
+ }
+ if(attached.length){
+   const idx=x=>['Picked','Loaded','Delivered','Setup','On Job','Returned'].indexOf(String(x.progress||''));
+   if(attached.every(x=>idx(x)>=3))return {label:'Setup',color:'#20B968',closed:false,attached,hadEquipment};
+   if(attached.some(x=>idx(x)>=1))return {label:'Loading',color:'#F5AD32',closed:false,attached,hadEquipment};
+ }
+ return {label:'Booked',color:'#F04444',closed:false,attached,hadEquipment};
+}
 function renderJobs(){
  const el=document.getElementById('jobs');
  const head=`<div class="card"><div class="section-head"><h2>Jobs</h2><button onclick="newJob()">＋ Create job</button></div><div class="muted">Build manifests, assign crew and vans, and track the whole job.</div></div>`;
  if(!data.jobs.length){el.innerHTML=head+'<div class="card empty">No jobs yet.<br>Tap <b>Create job</b> to get started.</div>';return;}
- const active=data.jobs.filter(j=>j.status!=='Complete').slice().reverse();
- const completed=data.jobs.filter(j=>j.status==='Complete').slice().reverse();
+ const statuses=new Map(data.jobs.map(j=>[String(j.id),getOperationalJobStatus(j)]));
+ const active=data.jobs.filter(j=>!statuses.get(String(j.id)).closed).slice().reverse();
+ const completed=data.jobs.filter(j=>statuses.get(String(j.id)).closed).slice().reverse();
  const card=j=>{
-   const items=data.items.filter(i=>i.jobId===j.id),total=items.length;
-   const isComplete=j.status==='Complete';
+   const operational=statuses.get(String(j.id));
+   const items=operational.attached,total=items.length;
+   const isComplete=operational.closed;
+   const statusStyle=`background:${operational.color};color:${operational.color==='#F5AD32'?'#171717':'#FFFFFF'};border:1px solid ${operational.color};`;
    const history=j.equipmentHistory||[];
    const used=[]; const seen=new Set();
    history.forEach(run=>(run.items||[]).forEach(i=>{const key=i.id||i.asset||i.name;if(!seen.has(key)){seen.add(key);used.push(i)}}));
    const historyHtml=used.length?`<div class="job-equipment-history"><div class="job-equipment-history-title">Equipment used on this job</div>${used.map(i=>`<div class="job-equipment-history-item"><b>${esc(i.name)}</b></div>`).join('')}</div>`:'';
-   return `<div class="job-summary ${isComplete?'job-complete':''}"><div class="row">${photoHtml(j.photo)}<div style="flex:1"><div class="job-summary-title">${esc(j.name)}</div><div class="job-summary-sub">${esc(j.date||'')} to ${esc(j.endDate||j.date||'')} • ${esc(j.status)} • ${isComplete?used.length+' item'+(used.length===1?'':'s')+' used':total+' item'+(total===1?'':'s')+' currently attached'}</div></div><span class="badge ${isComplete?'complete':''}">${esc(j.status)}</span></div><div class="job-assignment"><div><span class="small">CREW</span><br><b>👤 ${esc(jobCrewText(j))}</b></div><div><span class="small">VEHICLES</span><br><b>🚐 ${esc(jobVanText(j))}</b></div></div>${j.what3words?`<div class="muted">📍 ${esc(j.what3words)}</div>`:''}${historyHtml}<div class="actions"><button onclick="viewJob('${j.id}')">Open Job</button>${isComplete?`<button class="secondary" onclick="reopenJob('${j.id}')">Reopen Job</button>`:`<button class="green" onclick="completeJob('${j.id}')">Complete Job</button>`}${canDeleteJobs()?`<button class="danger" onclick="deleteJob('${j.id}')">Delete Job</button>`:''}</div></div>`;
+   return `<div class="job-summary ${isComplete?'job-complete':''}"><div class="row">${photoHtml(j.photo)}<div style="flex:1"><div class="job-summary-title">${esc(j.name)}</div><div class="job-summary-sub">${esc(j.date||'')} to ${esc(j.endDate||j.date||'')} • ${esc(operational.label)} • ${isComplete?used.length+' item'+(used.length===1?'':'s')+' used':total+' item'+(total===1?'':'s')+' currently attached'}</div></div><span class="badge job-workflow-status" style="${statusStyle}">${esc(operational.label)}</span></div><div class="job-assignment"><div><span class="small">CREW</span><br><b>👤 ${esc(jobCrewText(j))}</b></div><div><span class="small">VEHICLES</span><br><b>🚐 ${esc(jobVanText(j))}</b></div></div>${j.what3words?`<div class="muted">📍 ${esc(j.what3words)}</div>`:''}${historyHtml}<div class="actions"><button onclick="viewJob('${j.id}')">Open Job</button>${canDeleteJobs()?`<button class="danger" onclick="deleteJob('${j.id}')">Delete Job</button>`:''}</div></div>`;
  };
  let html=head;
  if(active.length)html+=active.map(card).join('');
@@ -1531,7 +1581,7 @@ function doCheckout(itemId){
  save();closeModal();viewJob(j.id);renderJobs();
 }
 function setProgress(itemId,step){/* Job-level progress only. */}
-function returnItem(itemId){const x=data.items.find(i=>i.id===itemId);if(!x)return;const oldJobId=x.jobId;if(Array.isArray(x.allocations)&&oldJobId)x.allocations=x.allocations.filter(a=>a.jobId!==oldJobId);x.status='Available';x.location='Warehouse';x.progress='Returned';x.jobId=null;x.job=null;x.userId='';x.vanId='';logActivity({itemId:x.id,itemName:x.name,action:'Returned',progress:'Returned',at:new Date().toISOString()});save();render()}
+function returnItem(itemId){const x=data.items.find(i=>i.id===itemId);if(!x)return;const oldJobId=x.jobId;const oldJob=(data.jobs||[]).find(j=>String(j.id)===String(oldJobId));if(oldJob){if(!oldJob.equipmentHistory)oldJob.equipmentHistory=[];oldJob.equipmentHistory.push({completedAt:new Date().toISOString(),items:[{id:x.id,name:x.name,asset:x.asset,category:x.category,serial:x.serial}]});}if(Array.isArray(x.allocations)&&oldJobId)x.allocations=x.allocations.filter(a=>a.jobId!==oldJobId);x.status='Available';x.location='Warehouse';x.progress='Returned';x.jobId=null;x.job=null;x.userId='';x.vanId='';logActivity({itemId:x.id,itemName:x.name,action:'Returned',progress:'Returned',at:new Date().toISOString()});save();render()}
 function viewItem(itemId){const x=data.items.find(i=>i.id===itemId);if(!x)return;openModal(`<h2>${esc(x.name)}</h2>${photoHtml(x.photo,'photo-hero')}<p><span class="asset-id">${esc(x.asset)}</span><br>${esc(x.category)}${x.serial?' • S/N '+esc(x.serial):''}</p><p>Status: <b>${esc(x.status)}</b><br>Location: ${esc(x.location)}</p><div class="actions">${x.status==='Out'?`<button class="green" onclick="closeModal();returnItem('${x.id}')">Return</button>`:`<button onclick="closeModal();checkout('${x.id}')">Check out</button>`}<button class="secondary" onclick="editItem('${x.id}')">Edit</button><button class="danger" onclick="deleteItem('${x.id}')">Delete</button></div>`)}
 function crewLoginSettings(){if(!requireDirector('manage crew logins'))return;returnToProfileOnClose=false;const enabled=!!data.settings.requireCrewLogin;openModal(`<h2>🔐 Crew Login Settings</h2><p class="muted">Each crew member has their own PIN. The app remembers the selected crew member on this phone until they choose Switch Crew or Log out.</p><label class="multi-row"><input id="require_login" type="checkbox" ${enabled?'checked':''}><span><b>Require crew login on this device</b></span></label><p class="small muted">Cloud accounts sync across phones. Local PINs remain available for devices that are not using cloud login.</p><div class="manage-grid" style="margin-top:12px">${crewUsers().map(u=>`<div class="manage-card"><b>${esc(u.name)}</b><div class="manage-note">${esc(roleLabel(u.role))} • ${u.pinHash?'PIN set':'No PIN set'}</div><button class="secondary" style="margin-top:8px" onclick="closeModal();editUser('${u.id}')">Edit login</button></div>`).join('')||'<div class="empty">Add crew members first.</div>'}</div><button onclick="saveCrewLoginSettings()">Save settings</button>`)}
 function saveCrewLoginSettings(){data.settings.requireCrewLogin=document.getElementById('require_login')?.checked||false;save();closeModal();render();if(data.settings.requireCrewLogin&&!loggedIn())showLoginOverlay()}
@@ -2563,13 +2613,26 @@ body.light-theme .hire-range-picker{background:#f8fafc!important;color:#17202a!i
 <script>
 (function(){
   const key='backstage_theme_mode_v1';
+  let collapseTimer=null;
+  const isMobile=()=>window.matchMedia('(max-width: 600px)').matches;
+  function setExpanded(expanded){
+    const control=document.getElementById('themeFaderControl');if(!control)return;
+    control.classList.toggle('tf-expanded',!!expanded);
+    const compact=control.querySelector('.tf-compact');if(compact)compact.setAttribute('aria-expanded',expanded?'true':'false');
+    if(isMobile()&&expanded)restartCollapseTimer();
+    else if(!expanded&&collapseTimer){clearTimeout(collapseTimer);collapseTimer=null;}
+  }
+  function restartCollapseTimer(){
+    if(collapseTimer)clearTimeout(collapseTimer);
+    collapseTimer=setTimeout(()=>{if(isMobile())setExpanded(false);},3000);
+  }
   function apply(mode){
     const light=mode==='light';
     document.body.classList.toggle('light-theme',light);
     const bannerImage=document.querySelector('.app-header-banner');
-    if(bannerImage){bannerImage.src=light?'regency-banner-day.png':'regency-banner.png';}
+    if(bannerImage)bannerImage.src=light?'regency-banner-day.png':'regency-banner.png';
     const control=document.getElementById('themeFaderControl');
-    if(control){control.dataset.mode=light?'light':'dark';control.setAttribute('aria-label',light?'Light theme selected. Move fader up for dark mode.':'Dark theme selected. Move fader down for light mode.');const label=control.querySelector('.tf-mode');if(label)label.textContent=light?'LIGHT':'DARK';}
+    if(control){control.dataset.mode=light?'light':'dark';control.setAttribute('aria-label',light?'Light theme selected':'Dark theme selected');const label=control.querySelector('.tf-mode');if(label)label.textContent=light?'DAY':'NIGHT';}
     const meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',light?'#f3f6f9':'#101713');
   }
   function init(){
@@ -2577,12 +2640,21 @@ body.light-theme .hire-range-picker{background:#f8fafc!important;color:#17202a!i
     const banner=document.querySelector('header');
     if(banner){if(getComputedStyle(banner).position==='static')banner.style.position='relative';
       if(!document.getElementById('themeFaderControl')){
-        const control=document.createElement('div');control.id='themeFaderControl';control.dataset.mode=mode;control.innerHTML='<span class="tf-label">THEME</span><button type="button" class="tf-track" aria-label="Toggle light and dark theme"><span class="tf-knob"></span></button><span class="tf-mode">'+(mode==='light'?'LIGHT':'DARK')+'</span>';
-        const track=control.querySelector('.tf-track');track.addEventListener('click',function(){const next=document.body.classList.contains('light-theme')?'dark':'light';try{localStorage.setItem(key,next);}catch(e){}apply(next);});
+        const control=document.createElement('div');control.id='themeFaderControl';control.dataset.mode=mode;
+        control.innerHTML='<button type="button" class="tf-compact" aria-label="Open day/night theme control" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg></button><div class="tf-panel"><span class="tf-label">THEME</span><button type="button" class="tf-track" aria-label="Toggle day and night theme"><span class="tf-knob"></span></button><span class="tf-mode">'+(mode==='light'?'DAY':'NIGHT')+'</span></div>';
+        const compact=control.querySelector('.tf-compact');
+        compact.addEventListener('click',function(){if(!isMobile())return;setExpanded(!control.classList.contains('tf-expanded'));});
+        const track=control.querySelector('.tf-track');
+        const changeTheme=function(){const next=document.body.classList.contains('light-theme')?'dark':'light';try{localStorage.setItem(key,next);}catch(e){}apply(next);if(isMobile())restartCollapseTimer();};
+        track.addEventListener('click',changeTheme);
+        control.addEventListener('pointerdown',()=>{if(isMobile()&&control.classList.contains('tf-expanded'))restartCollapseTimer();});
+        control.addEventListener('keydown',()=>{if(isMobile()&&control.classList.contains('tf-expanded'))restartCollapseTimer();});
         banner.appendChild(control);
       }
     }
     apply(mode);
+    const syncViewport=()=>{if(!isMobile()){setExpanded(false);if(collapseTimer){clearTimeout(collapseTimer);collapseTimer=null;}}};
+    window.addEventListener('resize',syncViewport,{passive:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
