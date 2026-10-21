@@ -565,6 +565,37 @@ body.light-theme #themeFaderControl .tf-mode{color:#087c42!important;}
 <style id="map-optimizer-styles">
 .route-hero{background:linear-gradient(135deg,#12231b,#0a100d);border:1px solid #31513d;border-radius:16px;padding:18px;margin-bottom:12px}.route-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.route-field{display:flex;flex-direction:column;gap:5px;margin:8px 0}.route-field label{font-size:12px;color:var(--muted,#a3ada5)}.route-field input,.route-field select,.route-field textarea{width:100%;box-sizing:border-box}.route-stop{border:1px solid var(--border,#303a33);border-radius:12px;padding:12px;margin:8px 0;background:var(--panel,#111713)}.route-stop-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.route-stop-actions{display:flex;gap:5px;flex-wrap:wrap}.route-stop-actions button{padding:6px 9px}.route-map{height:320px;border-radius:12px;overflow:hidden;background:#1b241e;margin:12px 0;border:1px solid #344239}.route-leg{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--border,#303a33)}.route-leg:last-child{border-bottom:0}.route-pill{display:inline-block;padding:4px 8px;border-radius:99px;background:#1d3928;color:#b6edc3;font-size:12px}.route-notice{padding:10px 12px;border-radius:10px;margin:10px 0;background:#1a2a20;border:1px solid #34533d}.route-notice.error{background:#321e1e;border-color:#774040;color:#ffd1d1}.route-notice.warn{background:#302a19;border-color:#6b5a2c;color:#f7e2a6}.route-muted{opacity:.78;font-size:12px}.route-main-btn{background:#287447!important;color:white!important}.route-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.route-actions button{flex:1;min-width:120px}@media(max-width:600px){.route-grid{grid-template-columns:1fr}.route-map{height:280px}.route-stop-head{align-items:flex-start}}
 </style>
+
+<style id="v701-bottom-navigation-visibility-fix">
+/* V70.1: keep the primary mobile navigation visible above page content. */
+html body nav.pwa-nav {
+  display: grid !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  position: fixed !important;
+  left: 0 !important; right: 0 !important; bottom: 0 !important;
+  width: 100% !important; box-sizing: border-box !important;
+  visibility: visible !important; opacity: 1 !important;
+  transform: none !important;
+  z-index: 15000 !important;
+  pointer-events: auto !important;
+  background: #050706 !important;
+  border-top: 2px solid var(--regency-green, #00d26a) !important;
+  padding: 6px 5px calc(6px + env(safe-area-inset-bottom)) !important;
+  gap: 4px !important;
+}
+html body nav.pwa-nav > button {
+  display: flex !important; visibility: visible !important; opacity: 1 !important;
+  min-width: 0 !important; width: 100% !important; min-height: 54px !important;
+  flex-direction: column !important; align-items: center !important; justify-content: center !important;
+  position: relative !important; margin: 0 !important; padding: 5px 2px !important;
+  color: #d7e1da !important; background: #090d0b !important;
+  border: 1px solid #26362c !important; border-radius: 9px !important;
+  font-size: 9px !important; line-height: 1.05 !important;
+}
+html body nav.pwa-nav > button.active { background: #12301f !important; border-color: #00a955 !important; color: #fff !important; }
+html body main { padding-bottom: calc(82px + env(safe-area-inset-bottom)) !important; }
+@media (min-width: 900px) { html body nav.pwa-nav { z-index: 15000 !important; } }
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Crew login and switch"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
