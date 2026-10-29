@@ -1162,6 +1162,148 @@ async function loadWindForecast(){
 }
 
 
+// Google Calendar integration
+const GOOGLE_CLIENT_ID='192233487875-65qpe6eq223d26hb3ka4m7vn1q1c9i0t.apps.googleusercontent.com';
+const GOOGLE_SCOPE='https://www.googleapis.com/auth/calendar.events.owned';
+let googleTokenClient=null;
+let googleAccessToken='';
+let googleBusy=false;
+
+function googleJobEvent(j,type){
+  const isPortaloo=type==='portaloo';
+  const isMarquee=type==='marquee';
+  const start=isPortaloo?(j.startDate||j.date):j.date;
+  if(!start)return null;
+  const end=isPortaloo&&j.endDate?googleDatePlusOne(j.endDate):googleDatePlusOne(start);
+  let title=`${isPortaloo?'🚽 Portaloo':isMarquee?'⛺ Marquee':'🎪 AV'} | ${j.name||'Job'}`;
+  if(j.status==='Complete')title+=' | COMPLETE';
+  const desc=[`Regency Events ${isPortaloo?'Portaloo':isMarquee?'Marquee':'AV'} Job`,`Status: ${j.status||''}`];
+  if(isPortaloo){
+    if(j.what3words)desc.push(`What3words: ${j.what3words}`);
+    if(j.customer?.company||j.customer?.name)desc.push(`Customer: ${j.customer?.company||j.customer?.name}`);
+    if(j.customer?.phone)desc.push(`Phone: ${j.customer.phone}`);
+    if(j.customer?.email)desc.push(`Email: ${j.customer.email}`);
+    if(j.rolling)desc.push('Schedule: Rolling / no fixed end date');
+    if(j.notes)desc.push(`Notes: ${j.notes}`);
+    const crew=(j.userIds||[]).map(userName).filter(Boolean);
+    if(crew.length)desc.push(`Crew: ${crew.join(', ')}`);
+    desc.push(`Units: Mondo ${Number(j.unit1)||0}, Maxim 3000 ${Number(j.unit2)||0}, Tuffway ${Number(j.unit3)||0}`);
+  }else if(isMarquee){
+    if(j.what3words)desc.push(`What3words: ${j.what3words}`);
+    if(j.size)desc.push(`Marquee / structure: ${j.size}`);
+    if(j.notes)desc.push(`Notes: ${j.notes}`);
+    const crew=(j.userIds||[]).map(userName).filter(Boolean);if(crew.length)desc.push(`Crew: ${crew.join(', ')}`);
+    const vans=(j.vanIds||[]).map(vanName).filter(Boolean);if(vans.length)desc.push(`Vans: ${vans.join(', ')}`);
+  }else{
+    if(j.what3words)desc.push(`What3words: ${j.what3words}`);
+    const crew=(j.userIds||[]).map(userName).filter(Boolean);
+    if(crew.length)desc.push(`Crew: ${crew.join(', ')}`);
+    const vans=(j.vanIds||[]).map(vanName).filter(Boolean);
+    if(vans.length)desc.push(`Vans: ${vans.join(', ')}`);
+    const count=data.items.filter(x=>x.jobId===j.id).length;
+    if(count)desc.push(`Current equipment attached: ${count}`);
+    if(j.completedAt)desc.push(`Completed: ${new Date(j.completedAt).toLocaleString()}`);
+  }
+  return {summary:title,description:desc.join('\n'),start:{date:start},end:{date:end},
+    extendedProperties:{private:{regencyJobId:j.id,regencyJobType:type}}};
+}
+function googleDatePlusOne(dateStr){
+  const d=new Date(String(dateStr)+'T00:00:00'); d.setDate(d.getDate()+1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+async function googleApi(path,options={}){
+  if(!googleAccessToken)throw new Error('Google Calendar is not connected.');
+  const headers=Object.assign({'Authorization':'Bearer '+googleAccessToken,'Content-Type':'application/json'},options.headers||{});
+  const r=await fetch('https://www.googleapis.com/calendar/v3'+path,Object.assign({},options,{headers}));
+  if(!r.ok){
+    let msg=''; try{const e=await r.json();msg=e.error?.message||'';}catch(_){}
+    if(r.status===401){googleAccessToken='';updateGoogleSyncUI();throw new Error('Google authorization expired. Please reconnect Google Calendar.');}
+    throw new Error(msg||`Google Calendar error ${r.status}`);
+  }
+  if(r.status===204)return null;
+  return r.json();
+}
+function updateGoogleSyncUI(){
+  const dot=document.getElementById('googleSyncDot'),status=document.getElementById('googleSyncStatus'),btn=document.getElementById('googleConnectBtn');
+  if(!status)return;
+  const connected=!!googleAccessToken;
+  if(dot)dot.classList.toggle('connected',connected);
+  status.textContent=connected?'Connected to your primary Google Calendar':'Not connected';
+  if(btn)btn.textContent=connected?'Google Calendar connected':'Connect Google Calendar';
+}
+async function connectGoogleCalendar(){
+  if(!window.google?.accounts?.oauth2){alert('Google sign-in is still loading. Please wait a moment and try again.');return;}
+  if(googleBusy)return;
+  googleBusy=true;
+  try{
+    googleTokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:GOOGLE_CLIENT_ID,scope:GOOGLE_SCOPE,
+      callback:async response=>{
+        googleBusy=false;
+        if(response.error){alert('Google Calendar authorization was not completed.');return;}
+        googleAccessToken=response.access_token;updateGoogleSyncUI();
+        await syncAllJobsToGoogle();
+      }
+    });
+    googleTokenClient.requestAccessToken({prompt:'consent'});
+  }catch(e){googleBusy=false;alert(e.message||'Could not connect Google Calendar.');}
+}
+function disconnectGoogleCalendar(){
+  if(googleAccessToken&&window.google?.accounts?.oauth2){try{google.accounts.oauth2.revoke(googleAccessToken,()=>{});}catch(e){}}
+  googleAccessToken='';googleTokenClient=null;updateGoogleSyncUI();
+}
+async function syncGoogleJob(j,type){
+  if(!googleAccessToken)return;
+  const event=googleJobEvent(j,type);if(!event)return;
+  try{
+    if(j.googleCalendarEventId){
+      try{
+        await googleApi(`/calendars/primary/events/${encodeURIComponent(j.googleCalendarEventId)}`,{method:'PUT',body:JSON.stringify(event)});
+      }catch(e){
+        if(/not found/i.test(e.message)){
+          const created=await googleApi('/calendars/primary/events',{method:'POST',body:JSON.stringify(event)});
+          j.googleCalendarEventId=created.id;
+        }else throw e;
+      }
+    }else{
+      const created=await googleApi('/calendars/primary/events',{method:'POST',body:JSON.stringify(event)});
+      j.googleCalendarEventId=created.id;
+    }
+    save();
+  }catch(e){console.error('Google Calendar sync failed',e);throw e;}
+}
+async function deleteGoogleJob(j){
+  if(!googleAccessToken||!j?.googleCalendarEventId)return;
+  try{
+    await googleApi(`/calendars/primary/events/${encodeURIComponent(j.googleCalendarEventId)}`,{method:'DELETE'});
+  }catch(e){if(!/not found/i.test(e.message))throw e;}
+  delete j.googleCalendarEventId;save();
+}
+function googleEventBuildEvent(e){
+ const desc=[`Regency Events Event Job`,`Status: ${e.status||''}`];
+ if(e.what3words)desc.push(`What3words: ${e.what3words}`);
+ if(e.customer?.company||e.customer?.name)desc.push(`Customer: ${e.customer.company||e.customer.name}`);
+ if(e.customer?.phone)desc.push(`Phone: ${e.customer.phone}`); if(e.customer?.email)desc.push(`Email: ${e.customer.email}`);
+ const crew=(e.userIds||[]).map(userName).filter(Boolean);if(crew.length)desc.push(`Crew: ${crew.join(', ')}`);
+ const vans=(e.vanIds||[]).map(vanName).filter(Boolean);if(vans.length)desc.push(`Vans: ${vans.join(', ')}`);
+ Object.entries(e.sections||{}).forEach(([k,items])=>{if(items?.length)desc.push(`${k.toUpperCase()}: `+items.map(x=>`${x.qty||1} x ${x.name}${x.notes?' ('+x.notes+')':''}`).join(', '));});
+ if(e.notes)desc.push(`Notes: ${e.notes}`);
+ let title=`🎪 ${e.name||'Event Job'}`;if(e.status==='Complete')title+=' | COMPLETE';
+ return {summary:title,description:desc.join('\n'),start:{date:e.date},end:{date:googleDatePlusOne(e.date)},extendedProperties:{private:{regencyEventId:e.id}}};
+}
+async function syncGoogleEvent(e){if(!googleAccessToken||!e?.date)return;const event=googleEventBuildEvent(e);try{if(e.googleCalendarEventId){try{await googleApi(`/calendars/primary/events/${encodeURIComponent(e.googleCalendarEventId)}`,{method:'PUT',body:JSON.stringify(event)});}catch(err){if(/not found/i.test(err.message)){const c=await googleApi('/calendars/primary/events',{method:'POST',body:JSON.stringify(event)});e.googleCalendarEventId=c.id;}else throw err;}}else{const c=await googleApi('/calendars/primary/events',{method:'POST',body:JSON.stringify(event)});e.googleCalendarEventId=c.id;}save();}catch(err){console.error('Google event sync failed',err);}}
+async function deleteGoogleEvent(e){if(!googleAccessToken||!e?.googleCalendarEventId)return;try{await googleApi(`/calendars/primary/events/${encodeURIComponent(e.googleCalendarEventId)}`,{method:'DELETE'});}catch(err){if(!/not found/i.test(err.message))throw err;}delete e.googleCalendarEventId;save();}
+async function syncAllJobsToGoogle(){
+  if(!googleAccessToken){connectGoogleCalendar();return;}
+  if(googleBusy)return;
+  googleBusy=true;
+  try{
+    for(const j of (data.events||[]))await syncGoogleEvent(j);
+    save();updateGoogleSyncUI();alert('Google Calendar sync complete.');
+  }catch(e){console.error(e);alert(e.message||'Google Calendar sync failed.');}
+  finally{googleBusy=false;}
+}
+
 let calendarDate = new Date();
 calendarDate.setHours(0,0,0,0);
 let calendarView = 'week';
