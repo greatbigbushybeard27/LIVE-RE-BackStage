@@ -670,6 +670,28 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 }
 </style>
 
+
+<style id="v71-6-calendar-deep-discreet-palette">
+/* V71.6: Deep & Discreet calendar palette. Dark, muted fills keep the Backstage green accent for controls. */
+:root{--cal-red:#42232C;--cal-blue:#20364A;--cal-green:#203C30}
+.calendar-count.events{background:#42232C!important;border-color:#A45D6B!important;color:#fff!important}
+.calendar-count.vans{background:#20364A!important;border-color:#5685AB!important;color:#fff!important}
+.calendar-count.portaloo{background:#203C30!important;border-color:#5C9978!important;color:#fff!important}
+.calendar-span-bar.event{background:#42232C!important;border:1px solid #A45D6B!important;color:#fff!important}
+.calendar-span-bar.hire{background:#20364A!important;border:1px solid #5685AB!important;color:#fff!important}
+.calendar-span-bar.portaloo{background:#203C30!important;border:1px solid #5C9978!important;color:#fff!important}
+.calendar-day-entry.event{background:#24171C!important;border-left-color:#A45D6B!important}
+.calendar-day-entry.hire{background:#15232F!important;border-left-color:#5685AB!important}
+.calendar-day-entry.portaloo{background:#15271F!important;border-left-color:#5C9978!important}
+.filter-dot.events,.calendar-dot.events{background:#A45D6B!important}
+.filter-dot.vans,.calendar-dot.vans{background:#5685AB!important}
+.filter-dot.portaloo,.calendar-dot.portaloo{background:#5C9978!important;border-color:#8CB5A0!important}
+/* Older calendar markup uses the same event-type colours. */
+.calendar-event.event,.calendar-event.events,.calendar-event-bar.event,.event-bar.event{background:#42232C!important;border:1px solid #A45D6B!important;color:#fff!important}
+.calendar-event.hire,.calendar-event-bar.hire,.hire-calendar-event{background:#20364A!important;border:1px solid #5685AB!important;color:#fff!important}
+.calendar-event.portaloo,.calendar-event-bar.portaloo{background:#203C30!important;border:1px solid #5C9978!important;color:#fff!important}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Crew login and switch"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
