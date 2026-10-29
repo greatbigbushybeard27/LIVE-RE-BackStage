@@ -1,4 +1,4 @@
-const CACHE_NAME = 'regency-backstage-live-v71-2-navigation-cleanup-equipment-crew-hs-tutorials';
+const CACHE_NAME = 'regency-backstage-live-v71-4-portaloo-card-photo';
 const CORE = ['./','./index.html','./manifest.webmanifest','./casual-induction.html','./regency-banner.png','./regency-banner-day.png','./regency-app-logo.png','./apple-touch-icon.png'];
 self.addEventListener('install', event => { event.waitUntil((async()=>{const c=await caches.open(CACHE_NAME); for(const url of CORE){try{await c.add(new Request(url,{cache:'reload'}));}catch(e){}} await self.skipWaiting();})()); });
 self.addEventListener('activate', event => { event.waitUntil((async()=>{const keys=await caches.keys(); await Promise.all(keys.filter(k=>k!==CACHE_NAME).map(k=>caches.delete(k))); await self.clients.claim();})()); });
