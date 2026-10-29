@@ -450,7 +450,7 @@ body.light-theme #themeFaderControl .tf-track:before{background:#64748b}
 @media(max-width:600px){#themeFaderControl{left:6px;top:6px;padding:5px 6px;gap:5px}#themeFaderControl .tf-track{height:50px}#themeFaderControl[data-mode="light"] .tf-knob{top:27px}}
 
 </style>
-<meta name="regency-build" content="V4-FLEET-STATUS-THEME-DATE-RANGE-V6"><meta name="theme-color" content="#050807"><style id="v585-copy-job-av-quantity">.v585-av-row{gap:8px;align-items:center}.v585-av-thumb{width:38px!important;height:38px!important;object-fit:cover;border-radius:7px;margin-right:0!important;flex:0 0 38px!important}.v585-av-name{min-width:0;overflow-wrap:anywhere}.v585-av-qty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;padding:4px 7px;border:1px solid var(--border,#334155);border-radius:8px;flex:0 0 auto}.v585-av-qty b{font-size:17px}.v585-av-qty .small{font-size:10px}.v585-av-row .manage-actions{gap:4px;flex-wrap:wrap}@media(max-width:430px){.v585-av-row{gap:5px}.v585-av-thumb{width:32px!important;height:32px!important;flex-basis:32px!important}.v585-av-qty{min-width:38px;padding:3px 5px}.v585-av-row .manage-actions button{padding:6px 7px;font-size:12px}}</style>
+<meta name="regency-build" content="V71.7-BALANCED-DESKTOP-CARDS-DEEP-DISCREET"><meta name="theme-color" content="#050807"><style id="v585-copy-job-av-quantity">.v585-av-row{gap:8px;align-items:center}.v585-av-thumb{width:38px!important;height:38px!important;object-fit:cover;border-radius:7px;margin-right:0!important;flex:0 0 38px!important}.v585-av-name{min-width:0;overflow-wrap:anywhere}.v585-av-qty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;padding:4px 7px;border:1px solid var(--border,#334155);border-radius:8px;flex:0 0 auto}.v585-av-qty b{font-size:17px}.v585-av-qty .small{font-size:10px}.v585-av-row .manage-actions{gap:4px;flex-wrap:wrap}@media(max-width:430px){.v585-av-row{gap:5px}.v585-av-thumb{width:32px!important;height:32px!important;flex-basis:32px!important}.v585-av-qty{min-width:38px;padding:3px 5px}.v585-av-row .manage-actions button{padding:6px 7px;font-size:12px}}</style>
 
 
 <style id="backstage-desktop-responsive-layout">
@@ -2877,6 +2877,82 @@ body.light-theme .hire-range-picker{background:#f8fafc!important;color:#17202a!i
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
+
+<style id="v71-7-balanced-desktop-cards">
+/* V71.7: balanced desktop cards. Deliberately desktop-only so phone layouts stay familiar. */
+@media (min-width: 900px) {
+  #events, #jobs, #portaloo, #equipment { max-width: 1600px; margin-left:auto!important; margin-right:auto!important; }
+  #events .job-summary, #jobs .job-summary {
+    grid-template-columns:minmax(280px,.82fr) minmax(0,1.45fr)!important;
+    gap:16px 28px!important; padding:24px!important; align-items:start!important;
+    min-height:250px!important; border-radius:18px!important;
+  }
+  #events .job-summary:has(.v62-job-photo), #jobs .job-summary:has(.v62-job-photo) {
+    grid-template-columns:minmax(300px,.9fr) minmax(0,1.5fr)!important;
+  }
+  #events .job-summary .v62-job-photo, #jobs .job-summary .v62-job-photo {
+    grid-column:1!important; grid-row:1 / span 6!important; align-self:stretch!important;
+    width:100%!important; max-height:none!important; min-height:220px!important; height:100%!important;
+    margin:0!important; border-radius:13px!important; overflow:hidden!important; background:#0b100d!important;
+  }
+  #events .job-summary .v62-job-photo-img, #jobs .job-summary .v62-job-photo-img {
+    display:block!important; width:100%!important; height:100%!important; min-height:220px!important;
+    max-height:320px!important; object-fit:cover!important; border-radius:13px!important;
+  }
+  #events .job-summary:has(.v62-job-photo) > .row, #jobs .job-summary:has(.v62-job-photo) > .row,
+  #events .job-summary:has(.v62-job-photo) > .job-summary-sub,
+  #events .job-summary:has(.v62-job-photo) > .job-summary-status,
+  #events .job-summary:has(.v62-job-photo) > .job-assignment,
+  #events .job-summary:has(.v62-job-photo) > .muted,
+  #events .job-summary:has(.v62-job-photo) > .event-section-tags,
+  #events .job-summary:has(.v62-job-photo) > .actions,
+  #jobs .job-summary:has(.v62-job-photo) > .job-summary-sub,
+  #jobs .job-summary:has(.v62-job-photo) > .job-summary-status,
+  #jobs .job-summary:has(.v62-job-photo) > .job-assignment,
+  #jobs .job-summary:has(.v62-job-photo) > .muted,
+  #jobs .job-summary:has(.v62-job-photo) > .event-section-tags,
+  #jobs .job-summary:has(.v62-job-photo) > .actions { grid-column:2!important; min-width:0!important; }
+  #events .job-summary-title, #jobs .job-summary-title { font-size:26px!important; line-height:1.22!important; font-weight:900!important; }
+  #events .job-summary-sub, #jobs .job-summary-sub { font-size:15px!important; line-height:1.5!important; }
+  #events .job-summary .row, #jobs .job-summary .row { gap:12px!important; align-items:flex-start!important; }
+  #events .job-assignment, #jobs .job-assignment { grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:10px!important; }
+  #events .job-assignment>div, #jobs .job-assignment>div { padding:14px 16px!important; min-height:76px!important; }
+  #events .job-assignment b, #jobs .job-assignment b { font-size:15px!important; line-height:1.4!important; }
+  #events .event-section-tags .badge, #jobs .event-section-tags .badge { font-size:12px!important; padding:7px 10px!important; }
+  #events .job-summary > .actions, #jobs .job-summary > .actions { display:flex!important; gap:10px!important; flex-wrap:wrap!important; }
+  #events .job-summary > .actions button, #jobs .job-summary > .actions button { min-height:42px!important; font-size:14px!important; }
+  /* Portaloo hire cards use a balanced stock/details split with more legible stock tiles. */
+  #portaloo .portaloo-card { display:grid!important; grid-template-columns:minmax(0,1.05fr) minmax(320px,1fr)!important; gap:14px 24px!important; padding:22px!important; border-radius:18px!important; align-items:start!important; }
+  #portaloo .portaloo-card > .row { grid-column:1/-1!important; align-items:center!important; gap:16px!important; }
+  #portaloo .portaloo-title { font-size:25px!important; font-weight:900!important; line-height:1.25!important; }
+  #portaloo .portaloo-sub { font-size:14px!important; line-height:1.5!important; }
+  #portaloo .portaloo-units { grid-column:1!important; grid-row:2 / span 3!important; grid-template-columns:repeat(3,minmax(0,1fr))!important; gap:12px!important; margin:0!important; }
+  #portaloo .portaloo-unit { padding:12px!important; border:1px solid var(--regency-border)!important; border-radius:12px!important; }
+  #portaloo .portaloo-unit-photo, #portaloo .portaloo-unit-photo-fallback { height:125px!important; margin-bottom:10px!important; }
+  #portaloo .portaloo-unit-photo-fallback img { width:72px!important; height:72px!important; }
+  #portaloo .portaloo-unit b { font-size:30px!important; line-height:1.15!important; }
+  #portaloo .portaloo-unit span { display:block!important; font-size:13px!important; line-height:1.35!important; margin-top:6px!important; }
+  #portaloo .portaloo-card > .muted, #portaloo .portaloo-service-due { grid-column:2!important; font-size:15px!important; line-height:1.7!important; }
+  #portaloo .portaloo-card > .actions { grid-column:2!important; gap:10px!important; flex-wrap:wrap!important; }
+  #portaloo .portaloo-card > .actions button { min-height:42px!important; padding:11px 16px!important; font-size:14px!important; }
+  /* Equipment and vehicle inventory rows: bigger thumbnails and less cramped controls. */
+  #equipment .manage-grid { grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:16px!important; }
+  #equipment .manage-card { padding:18px!important; border-radius:16px!important; }
+  #equipment .manage-row { gap:14px!important; padding:13px 0!important; }
+  #equipment .photo-thumb { width:78px!important; height:70px!important; flex:0 0 78px!important; object-fit:cover!important; border-radius:10px!important; }
+  #equipment .manage-row-title, #equipment .manage-row-main b { font-size:15px!important; line-height:1.35!important; }
+  #equipment .manage-row-meta { font-size:13px!important; line-height:1.45!important; }
+  #equipment .manage-actions { gap:8px!important; }
+  #equipment .manage-actions button { min-height:38px!important; padding:9px 12px!important; font-size:13px!important; }
+}
+@media (min-width: 1300px) {
+  #events .job-summary, #jobs .job-summary { grid-template-columns:minmax(340px,.9fr) minmax(0,1.5fr)!important; padding:28px!important; gap:18px 32px!important; }
+  #events .job-summary-title, #jobs .job-summary-title { font-size:29px!important; }
+  #portaloo .portaloo-card { grid-template-columns:minmax(0,1.15fr) minmax(380px,1fr)!important; padding:26px!important; }
+  #portaloo .portaloo-unit-photo, #portaloo .portaloo-unit-photo-fallback { height:145px!important; }
+  #equipment .manage-grid { grid-template-columns:repeat(3,minmax(0,1fr))!important; }
+}
+</style>
 
 </body></html>
 
