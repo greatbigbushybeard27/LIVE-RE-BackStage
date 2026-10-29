@@ -622,6 +622,54 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 
 </style>
 
+
+<style id="v71-5-desktop-job-layout">
+/* V71.5: separate desktop menu/theme controls and use the desktop canvas better. */
+@media (min-width: 900px) {
+  #backstageMenuButton { position:fixed!important; top:12px!important; left:12px!important; z-index:6102!important; }
+  #themeFaderControl { position:fixed!important; top:12px!important; left:68px!important; right:auto!important; z-index:6090!important; transform:none!important; }
+  #themeFaderControl .tf-panel { box-shadow:0 3px 12px #0005!important; }
+  #backstageMenuDrawer { padding-top:22px!important; }
+  .menu-drawer-head { padding-top:54px!important; min-height:112px; align-items:flex-end!important; }
+  .menu-drawer-close { flex:0 0 36px; }
+  /* Job/event cards: use two readable columns rather than a narrow text stack. */
+  #events .job-summary, #jobs .job-summary {
+    display:grid!important;
+    grid-template-columns:minmax(0,1.35fr) minmax(300px,1fr)!important;
+    align-items:start!important;
+    gap:14px 28px!important;
+    padding:24px 28px!important;
+    min-height:210px;
+  }
+  #events .job-summary > .row, #jobs .job-summary > .row { grid-column:1/-1!important; gap:18px!important; }
+  #events .job-summary-title, #jobs .job-summary-title { font-size:24px!important; line-height:1.25!important; }
+  #events .job-summary-sub, #jobs .job-summary-sub { font-size:14px!important; line-height:1.5!important; }
+  #events .event-section-tags { grid-column:1/-1!important; display:flex; flex-wrap:wrap; gap:8px!important; }
+  #events .job-summary-status { grid-column:1!important; font-size:14px!important; }
+  #events .job-assignment, #jobs .job-assignment { grid-column:2!important; grid-row:auto!important; display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:12px!important; align-self:stretch!important; }
+  #events .job-assignment > div, #jobs .job-assignment > div { padding:14px!important; border-radius:12px!important; min-width:0!important; }
+  #events .job-assignment b, #jobs .job-assignment b { font-size:15px!important; overflow-wrap:anywhere; }
+  #events .job-summary > .muted, #jobs .job-summary > .muted { font-size:14px!important; line-height:1.5!important; }
+  #events .job-summary > .actions, #jobs .job-summary > .actions { grid-column:1/-1!important; display:flex!important; flex-wrap:wrap!important; gap:10px!important; margin-top:4px!important; }
+  #events .job-summary > .actions button, #jobs .job-summary > .actions button { min-width:130px; padding:12px 16px!important; }
+  #jobs .job-equipment-history { grid-column:1/-1!important; }
+  /* All existing modal flows become a left-side drawer on desktop, ideal for job view/create/edit. */
+  #modal.modal { align-items:stretch!important; justify-content:flex-start!important; padding:0!important; }
+  #modal .sheet { width:min(760px,58vw)!important; max-width:760px!important; height:100vh!important; max-height:100vh!important; margin:0 auto 0 0!important; align-self:stretch!important; border-radius:0 18px 18px 0!important; padding:68px 30px 34px!important; overflow-y:auto!important; box-shadow:12px 0 44px #0007!important; }
+  #modal .sheet h2 { font-size:25px!important; }
+  #modal .sheet .photo-hero { display:block!important; width:100%!important; max-width:100%!important; height:auto!important; max-height:240px!important; object-fit:contain!important; object-position:left center!important; margin:10px 0 16px!important; }
+  #modal .sheet .job-summary { display:block!important; min-height:0!important; padding:18px!important; }
+}
+@media (min-width: 1400px) {
+  #events .job-summary, #jobs .job-summary { grid-template-columns:minmax(0,1.5fr) minmax(360px,1fr)!important; }
+  #modal .sheet { width:min(820px,52vw)!important; }
+}
+@media (max-width: 899px) {
+  /* Keep the established phone/tablet bottom-sheet and menu behaviour unchanged. */
+  #backstageMenuButton { z-index:6102!important; }
+}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Crew login and switch"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
