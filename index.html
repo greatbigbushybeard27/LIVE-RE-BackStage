@@ -1198,7 +1198,7 @@ async function photoFromInput(id){
  return await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const max=900,scale=Math.min(1,max/Math.max(im.width,im.height));const c=document.createElement('canvas');c.width=Math.round(im.width*scale);c.height=Math.round(im.height*scale);c.getContext('2d').drawImage(im,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.72))};im.onerror=reject;im.src=r.result};r.onerror=reject;r.readAsDataURL(file)});
 }
 function photoHtml(src,cls='photo-thumb'){return src?`<img class="${cls}" src="${src}" alt="Photo">`:''}
-function userName(id){return (data.users.find(x=>x.id===id)||{}).name||'Unassigned'}
+function userName(id){return (arr(data.users).find(x=>x.id===id)||{}).name||'Unassigned'}
 
 function toggleAllCrew(className,checked){document.querySelectorAll('.'+className).forEach(x=>x.checked=checked)}
 function jobCrewText(j){
@@ -1209,7 +1209,7 @@ function jobVanText(j){
   const a=(j.vanIds||[]).map(vanName).filter(x=>x!=='Unassigned');
   return a.length?a.join(', '):'Unassigned';
 }
-function vanName(id){return (data.vans.find(x=>x.id===id)||{}).name||'Unassigned'}
+function vanName(id){return (arr(data.vans).find(x=>x.id===id)||{}).name||'Unassigned'}
 function currentStep(x){return Math.max(0,progressSteps.indexOf(x.progress||'Picked'))}
 function progressBar(x){let n=currentStep(x);return '<div class="progress">'+progressSteps.map((s,i)=>`<span class="step ${i===n?'active':i<n?'done':''}" onclick="setProgress('${x.id}','${s}')">${s}</span>`).join('')+'</div>'}
 
@@ -1227,13 +1227,13 @@ function reportMatches(row){
  return true;
 }
 function reportDataSets(){
- const events=arr(data.events).map(j=>({id:j.id,name:j.name||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.finishDate||j.date||'',onsite:j.onsiteDate||j.buildDate||'',breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',crew:eventCrewText(j)||'',vehicles:eventVanText(j)||'',what3words:j.what3words||'',notes:j.notes||'',source:j}));
- const jobs=arr(data.jobs).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({id:j.id,name:j.name||j.title||'',customer:j.customer||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.date||'',onsite:j.onsiteDate||'',breakdown:j.breakdownDate||'',status:j.status||'',crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),what3words:j.what3words||'',notes:j.notes||'',source:j}));
+ const events=arr(data.events).filter(Boolean).map(j=>({id:j.id,name:j.name||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.finishDate||j.date||'',onsite:j.onsiteDate||j.buildDate||'',breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',crew:eventCrewText(j)||'',vehicles:eventVanText(j)||'',what3words:j.what3words||'',notes:j.notes||'',source:j}));
+ const jobs=arr(data.jobs).filter(Boolean).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({id:j.id,name:j.name||j.title||'',customer:j.customer||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.date||'',onsite:j.onsiteDate||'',breakdown:j.breakdownDate||'',status:j.status||'',crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),what3words:j.what3words||'',notes:j.notes||'',source:j}));
  const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id,'Job Name':j.name,Customer:j.customer,Venue:j.venue,'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
  const stockRows=[];
  ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>arr(data[key]).forEach(item=>arr(item.allocations).forEach(a=>{
    const e=events.find(x=>String(x.id)===String(a.jobId)||String(x.source.avJobId||'')===String(a.jobId));
-   const j=jobs.find(x=>String(x.id)===String(a.jobId));const p=(data.portalooJobs||[]).find(x=>String(x.id)===String(a.jobId));
+   const j=jobs.find(x=>String(x.id)===String(a.jobId));const p=arr(data.portalooJobs).find(x=>String(x.id)===String(a.jobId));
    if(!e&&!j&&!p)return;
    stockRows.push({'Job Name':e?.name||j?.name||p?.name||'','Job ID':a.jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||key,'Quantity':Number(a.qty)||1,'Allocated Date':reportDate(a.date||e?.start||j?.start||p?.startDate),'Returned':a.returned===true?'Yes':a.returned===false?'No':'Not recorded'});
  })));
@@ -1242,9 +1242,9 @@ function reportDataSets(){
    history.forEach(u=>{const jobId=u.jobId||u.id;const event=events.find(x=>String(x.id)===String(jobId)||String(x.source.avJobId||'')===String(jobId));const job=jobs.find(x=>String(x.id)===String(jobId));if(!event&&!job)return;stockRows.push({'Job Name':event?.name||job?.name||u.jobName||'','Job ID':jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||'Equipment','Quantity':Number(u.qty||u.quantity)||1,'Allocated Date':reportDate(u.date||u.at||event?.start||job?.start),'Returned':u.returned===true?'Yes':u.returned===false?'No':'Not recorded'});});
  });
  const crewRows=jobRows.map(r=>({'Job Name':r['Job Name'],Customer:r.Customer,Crew:r.Crew,Vehicles:r.Vehicles,Status:r.Status}));
- const hires=arr(ensureV51().hireVehicles).map(v=>({'Booking ID':v.id,Vehicle:v.vehicleName||'',Registration:v.registration||'',Customer:v.customer||'','Hire Type':reportHireType(v),'Hire Start':reportDate(v.start),'Hire End':reportDate(v.end),'Actual Return Date':v.returnedAt?reportDate(v.returnedAt):'','Hire Status':vehicleStatus(v),Status:vehicleStatus(v),'Raw Booking Status':v.status||'',Area:v.area||'',Notes:v.notes||''}));
- const portaloo=arr(data.portalooJobs).map(j=>({'Job ID':j.id,'Job Name':j.name||'',Customer:j.customer||j.client||'',Location:j.location||j.siteAddress||'',What3words:j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,'Total Units':portalooUnitTotal(j),'Status':j.status||'','Next Service':reportDate(portalooServiceDueDate(j)),Notes:j.notes||''}));
- const portalooService=arr(data.portalooJobs).flatMap(j=>arr(j.serviceHistory||j.services).map(s=>({'Portaloo Job':j.name||'',Customer:j.customer||'','Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'',Notes:s.notes||''})));
+ const hires=arr(ensureV51().hireVehicles).filter(Boolean).map(v=>({'Booking ID':v.id,Vehicle:v.vehicleName||'',Registration:v.registration||'',Customer:v.customer||'','Hire Type':reportHireType(v),'Hire Start':reportDate(v.start),'Hire End':reportDate(v.end),'Actual Return Date':v.returnedAt?reportDate(v.returnedAt):'','Hire Status':vehicleStatus(v),Status:vehicleStatus(v),'Raw Booking Status':v.status||'',Area:v.area||'',Notes:v.notes||''}));
+ const portaloo=arr(data.portalooJobs).filter(Boolean).map(j=>({'Job ID':j.id,'Job Name':j.name||'',Customer:j.customer||j.client||'',Location:j.location||j.siteAddress||'',What3words:j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,'Total Units':portalooUnitTotal(j),'Status':j.status||'','Next Service':reportDate(portalooServiceDueDate(j)),Notes:j.notes||''}));
+ const portalooService=arr(data.portalooJobs).filter(Boolean).flatMap(j=>arr(j.serviceHistory||j.services).filter(Boolean).map(s=>({'Portaloo Job':j.name||'',Customer:j.customer||'','Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'',Notes:s.notes||''})));
  return {jobs:jobRows,stock:stockRows,crew:crewRows,hires,portaloo,portalooService};
 }
 function reportFilterRows(rows){return rows.filter(reportMatches);}
@@ -2094,8 +2094,8 @@ function confirmDeleteJob(jobId){
 }
 
 
-function eventCrewText(e){const a=arr(e.userIds).map(userName).filter(x=>x!=='Unassigned');return a.length?a.join(', '):'Unassigned';}
-function eventVanText(e){const a=arr(e.vanIds).map(vanName).filter(x=>x!=='Unassigned');return a.length?a.join(', '):'Unassigned';}
+function eventCrewText(e){const a=arr(e&&e.userIds).map(userName).filter(x=>x!=='Unassigned');return a.length?a.join(', '):'Unassigned';}
+function eventVanText(e){const a=arr(e&&e.vanIds).map(vanName).filter(x=>x!=='Unassigned');return a.length?a.join(', '):'Unassigned';}
 function eventStatusClass(status){return String(status||'').toLowerCase().replace(/[^a-z]+/g,'-').replace(/^-|-$/g,'')||'not-started'}
 function eventStatusBadge(status){const s=String(status||'Not Started');return `<span class="badge event-status-badge status-${eventStatusClass(s)}">${esc(s)}</span>`}
 function eventStatusFillClass(status){return `event-progress-fill status-${eventStatusClass(status)}`}
@@ -2338,7 +2338,7 @@ function renderPortaloo(){
 function portalooServiceDueDate(j){
  const today=new Date(); today.setHours(0,0,0,0);
  if(j.nextServiceDate)return j.nextServiceDate;
- const services=(j.services||[]).filter(s=>s.date).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+ const services=arr(j.services).filter(s=>s&&s.date).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date)));
  const base=services[0]?.date||j.startDate; if(!base)return '';
  const d=new Date(base+'T00:00:00'); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10);
 }
