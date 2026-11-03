@@ -3533,43 +3533,80 @@ window.renderStaffCalendar=function(){
  const endKey=dayKey(realDates[realDates.length-1]),startKey=dayKey(realDates[0]);
  const title=staffCalendarView==='day'?fmtDate(start):staffCalendarView==='week'?`${fmtDate(realDates[0])} – ${fmtDate(realDates[6])}`:start.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
  const entries=staffRows().filter(x=>x.startDate<=endKey&&x.endDate>=startKey);
+ data.staffCalendarNotes=Array.isArray(data.staffCalendarNotes)?data.staffCalendarNotes:[];
+ const firstNames={};(data.users||[]).filter(p=>p&&p.id&&String(p.name||'').trim().toLowerCase()!=='regency crew').forEach(p=>{const f=String(p.name||'').trim().split(/\s+/)[0].toLowerCase();firstNames[f]=(firstNames[f]||0)+1});
+ const displayName=p=>{const parts=String(p.name||'Crew').trim().split(/\s+/),first=parts[0]||'Crew';return firstNames[first.toLowerCase()]>1&&parts.length>1?first+' '+parts[1][0].toUpperCase():first};
  const rowsHtml=visible.map(person=>{
   const type=staffType(person),personEntries=entries.filter(e=>String(e.userId)===String(person.id));
-  const squares=dates.map(d=>{if(!d)return '<div class="sc-bigday blank"></div>';const k=dayKey(d),leave=personEntries.some(e=>e.kind!=='Shift'&&k>=e.startDate&&k<=e.endDate),shift=personEntries.some(e=>e.kind==='Shift'&&k>=e.startDate&&k<=e.endDate),regular=type==='Regular Crew'&&d.getDay()>0&&d.getDay()<6;
-   const cls=leave?'away':shift?'shift':regular?'regular':'empty',label=leave?'OFF':shift?'IN':regular?'IN':'';
-   return `<div class="sc-bigday ${cls}" title="${k} ${label}">${staffCalendarView==='month'?d.getDate()+(label?' · '+label:''):label}</div>`;
+  const squares=dates.map(d=>{if(!d)return '<div class="sc-day-block blank"></div>';const k=dayKey(d),leave=personEntries.some(e=>e.kind!=='Shift'&&k>=e.startDate&&k<=e.endDate),shift=personEntries.some(e=>e.kind==='Shift'&&k>=e.startDate&&k<=e.endDate),regular=type==='Regular Crew'&&d.getDay()>0&&d.getDay()<6;
+   const status=leave?'away':(shift||regular)?'working':'empty';
+   const note=data.staffCalendarNotes.find(n=>String(n.userId)===String(person.id)&&n.date===k);
+   const legacyNote=personEntries.find(e=>k>=e.startDate&&k<=e.endDate&&e.note);
+   const hasNote=!!(note?.text||legacyNote?.note);
+   return `<button class="sc-day-block ${status}" onclick="openStaffDayNote('${escx(person.id)}','${k}')" title="${k}${hasNote?' · Note added':''}">${hasNote?'<i>!</i>':''}</button>`;
   }).join('');
-  return `<div class="sc-person-row"><div class="sc-person-name"><b>${escx(person.name)}</b><small>${type}</small></div><div class="sc-bigtrack ${staffCalendarView}">${squares}</div></div>`;
+  return `<div class="sc-person-row"><div class="sc-person-name"><b>${escx(displayName(person))}</b></div><div class="sc-bigtrack ${staffCalendarView}">${squares}</div></div>`;
  }).join('');
  const requestsHtml=requests.map(r=>{const apps=r.applications||[],accepted=apps.filter(a=>a.status==='Accepted').length,applied=apps.filter(a=>a.status==='Pending').length,needed=Object.values(r.required||{}).reduce((s,n)=>s+n,0),applicable=Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`${role}: ${n}`).join(' · ');return `<div class="card sr-card"><div class="section-head"><div><h3 style="margin:0">${escx(r.title||jobLabel(r.jobId))}</h3><div class="muted small">${r.startDate}${r.endDate!==r.startDate?' to '+r.endDate:''} · ${r.startTime||''}–${r.finishTime||''}</div></div><span class="badge">${accepted}/${needed} filled</span></div><p class="small">${escx(applicable)}${(r.qualifications||[]).length?' · Skills: '+r.qualifications.map(escx).join(', '):''}</p>${r.notes?`<p class="muted small">${escx(r.notes)}</p>`:''}<p class="small muted">${applied} pending applications · ${apps.length} total applications</p>${isMgr?`<details><summary>Review crew applications (${apps.length})</summary>${apps.map(a=>`<div class="sr-app"><b>${escx(a.name)}</b><span class="small muted">${escx(a.role||'Crew')} · ${escx(a.status)}</span>${a.status==='Pending'?`<button onclick="reviewStaffApplication('${r.id}','${a.id}','Accept')">Select</button><button class="secondary" onclick="reviewStaffApplication('${r.id}','${a.id}','Decline')">Decline</button>`:''}</div>`).join('')||'<p class="muted">No applications yet.</p>'}</details><button class="secondary" onclick="closeStaffRequest('${r.id}')">Close request</button>`:`${Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`<button onclick="applyStaffRequest('${r.id}','${escx(role)}')">Request · ${escx(role)}</button>`).join('')}`}</div>`}).join('');
  host.innerHTML=`<style>
  #staffCalendar .sc-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
- #staffCalendar .sc-person-row{padding:12px 0;border-bottom:1px solid var(--regency-border)}
- #staffCalendar .sc-person-name{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
- #staffCalendar .sc-person-name b{font-size:16px}#staffCalendar .sc-person-name small{font-size:12px;color:var(--regency-muted)}
- #staffCalendar .sc-bigtrack{display:grid;gap:5px;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr))}
- #staffCalendar .sc-bigday{height:42px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;letter-spacing:.3px;border:1px solid rgba(130,160,140,.2);background:#18271f;color:#718278}
- #staffCalendar .sc-bigtrack.day .sc-bigday{height:58px;font-size:16px}
- #staffCalendar .sc-bigtrack.month{gap:3px;grid-template-columns:repeat(7,minmax(0,1fr))}#staffCalendar .sc-bigtrack.month .sc-bigday{height:36px;font-size:10px}#staffCalendar .sc-bigday.blank{visibility:hidden}
- #staffCalendar .sc-bigday.regular{background:#286541;border:1px solid #3e8b5d;color:#f1fff4}
- #staffCalendar .sc-bigday.shift{background:#367c4d;border:1px solid #5da875;color:white}
- #staffCalendar .sc-bigday.away{background:#843f43;border:1px solid #bd686d;color:white}
- #staffCalendar .sc-day-head{display:grid;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr));gap:5px;margin:12px 0 4px}
- #staffCalendar .sc-day-head span{text-align:center;font-size:11px;font-weight:800;color:var(--regency-muted)}
- #staffCalendar .sc-filter{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
- #staffCalendar .sc-filter button{padding:8px 11px}
+ #staffCalendar .sc-calendar-scroll{overflow-x:auto;max-width:100%;padding-bottom:5px}
+ #staffCalendar .sc-calendar-grid{min-width:${staffCalendarView==='month'?'720px':staffCalendarView==='week'?'620px':'300px'}}
+ #staffCalendar .sc-person-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--regency-border)}
+ #staffCalendar .sc-person-name{position:sticky;left:0;z-index:2;background:var(--regency-panel);min-height:42px;display:flex;align-items:center;padding-right:4px}
+ #staffCalendar .sc-person-name b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #staffCalendar .sc-bigtrack{display:grid;gap:4px;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr))}
+ #staffCalendar .sc-day-block{position:relative;display:block;width:100%;height:42px;min-width:0;padding:0;border-radius:6px;border:1px solid #34483d;background:#1b2b22;cursor:pointer}
+ #staffCalendar .sc-bigtrack.day .sc-day-block{height:54px}
+ #staffCalendar .sc-bigtrack.month{gap:3px;grid-template-columns:repeat(7,minmax(0,1fr))}
+ #staffCalendar .sc-bigtrack.month .sc-day-block{height:32px}
+ #staffCalendar .sc-day-block.working{background:#286541;border:1px solid #43875b}
+ #staffCalendar .sc-day-block.away{background:#843f43;border:1px solid #bd686d}
+ #staffCalendar .sc-day-block.empty{background:#1b2b22;border:1px solid #34483d}
+ #staffCalendar .sc-day-block.blank{visibility:hidden;pointer-events:none}
+ #staffCalendar .sc-day-block i{position:absolute;right:3px;top:2px;width:15px;height:15px;border-radius:50%;background:#f2f5f2;color:#183323;font-size:11px;font-style:normal;font-weight:900;line-height:15px;text-align:center;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+ #staffCalendar .sc-day-head{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;margin:12px 0 4px}
+ #staffCalendar .sc-day-head .sc-day-labels{display:grid;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr));gap:4px}
+ #staffCalendar .sc-day-head span{text-align:center;font-size:10px;font-weight:800;color:var(--regency-muted);white-space:nowrap}
+ #staffCalendar .sc-filter{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:10px;width:100%}
+ #staffCalendar .sc-filter button{width:100%;padding:9px 4px;font-size:12px;white-space:nowrap}
  #staffCalendar .sc-filter button.active{background:#285c3e;border-color:#4d9568;color:#f1fff4}
+ #staffCalendar .sc-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px}
+ #staffCalendar .sc-legend span{display:flex;align-items:center;gap:6px}
+ #staffCalendar .sc-legend i{display:inline-block;width:14px;height:14px;border-radius:3px}
  #staffCalendar .sr-card{margin:10px 0}#staffCalendar .sr-app{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--regency-border)}
  </style>
  <div class="card"><div class="sc-toolbar"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Who's in, who's away and confirmed shifts.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${title}</b><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
  ${isMgr?`<div class="sc-filter">${['All Staff','Regular Crew','Part Time Crew'].map(v=>`<button class="${staffCalendarFilter===v?'active':'secondary'}" onclick="setStaffCalendarFilter('${v}')">${v}</button>`).join('')}</div>`:''}
  <div class="sc-filter">${['day','week','month'].map(v=>`<button class="${staffCalendarView===v?'active':'secondary'}" onclick="setStaffCalendarView('${v}')">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}</div>
- <div class="sc-day-head" style="--sc-days:${staffCalendarView==='month'?7:days}">${(staffCalendarView==='month'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:dates).map(d=>`<span>${typeof d==='string'?d:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</span>`).join('')}</div>
- <div style="--sc-days:${staffCalendarView==='month'?7:days}">${rowsHtml||'<p class="muted">No staff match this filter.</p>'}</div>
- <div class="sc-filter small"><span style="color:#4e9a68">■ Working / confirmed shift</span><span style="color:#bd686d">■ Holiday / unavailable</span><span style="color:#718278">■ Not scheduled</span></div>
+ <div class="sc-calendar-scroll"><div class="sc-calendar-grid"><div class="sc-day-head" style="--sc-days:${staffCalendarView==='month'?7:days}"><span></span><div class="sc-day-labels">${(staffCalendarView==='month'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:dates).map(d=>`<span>${typeof d==='string'?d:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</span>`).join('')}</div></div>
+ <div style="--sc-days:${staffCalendarView==='month'?7:days}">${rowsHtml||'<p class="muted">No staff match this filter.</p>'}</div></div></div>
+ <div class="sc-legend"><span><i style="background:#286541"></i>Working / confirmed shift</span><span><i style="background:#843f43"></i>Holiday / unavailable</span><span><i style="background:#1b2b22;border:1px solid #34483d"></i>Not scheduled</span><span>! Note added</span></div>
  ${!isMgr?`<div class="actions"><button onclick="staffCalendarForm('Holiday')">＋ Add Holiday</button><button class="secondary" onclick="staffCalendarForm('Unavailable')">＋ Unavailable</button>${staffType(u)==='Part Time Crew'?`<button class="secondary" onclick="staffCalendarForm('Shift')">＋ Add agreed shift</button>`:''}</div>`:''}</div>
  <div class="card"><div class="section-head"><div><h2>📣 ${isMgr?'Staff Requests':'Available Shifts'}</h2><p class="muted">${isMgr?'Publish extra crew requirements and select applicants.':'Browse shifts and put your name forward.'}</p></div>${isMgr?'<button onclick="staffRequestForm()">＋ New request</button>':''}</div>${requestsHtml||'<p class="muted">No open staffing requests.</p>'}</div>`;
 };
+
+window.openStaffDayNote=function(userId,date){
+ const u=me(),person=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u||!person)return;
+ if(String(u.id)!==String(userId)&&!manager())return alert('You can only view your own personal notes.');
+ data.staffCalendarNotes=Array.isArray(data.staffCalendarNotes)?data.staffCalendarNotes:[];
+ const rec=data.staffCalendarNotes.find(n=>String(n.userId)===String(userId)&&n.date===date);
+ const text=rec?.text||'';
+ openModal(`<h2>${escx(person.name)} · ${new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})}</h2><p class="muted">Add a private note about this day, such as a half day, appointment or limited hours. Only this crew member and Directors can view it.</p><label>Day note<textarea id="staffDayNoteText" rows="3" maxlength="500" placeholder="e.g. Available for 3 hours, appointment at 13:00...">${escx(text)}</textarea></label><div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="saveStaffDayNote('${escx(userId)}','${date}')">Save note</button>${rec?`<button class="secondary" onclick="deleteStaffDayNote('${escx(userId)}','${date}')">Remove note</button>`:''}</div>`);
+};
+window.saveStaffDayNote=function(userId,date){
+ const u=me();if(!u||(String(u.id)!==String(userId)&&!manager()))return alert('You can only edit your own personal notes.');
+ const text=document.getElementById('staffDayNoteText')?.value.trim()||'';
+ data.staffCalendarNotes=Array.isArray(data.staffCalendarNotes)?data.staffCalendarNotes:[];
+ const i=data.staffCalendarNotes.findIndex(n=>String(n.userId)===String(userId)&&n.date===date);
+ if(!text){if(i>=0)data.staffCalendarNotes.splice(i,1)}else if(i>=0){data.staffCalendarNotes[i].text=text;data.staffCalendarNotes[i].updatedAt=new Date().toISOString()}else data.staffCalendarNotes.push({id:'scn_'+Date.now(),userId,date,text,createdAt:new Date().toISOString()});
+ save();closeModal();renderStaffCalendar();
+};
+window.deleteStaffDayNote=function(userId,date){
+ const u=me();if(!u||(String(u.id)!==String(userId)&&!manager()))return alert('You can only edit your own personal notes.');
+ data.staffCalendarNotes=(data.staffCalendarNotes||[]).filter(n=>!(String(n.userId)===String(userId)&&n.date===date));save();closeModal();renderStaffCalendar();
+};
+
 window.staffCalMove=function(n){if(staffCalendarView==='day')staffCalendarDate.setDate(staffCalendarDate.getDate()+n);else if(staffCalendarView==='week')staffCalendarDate.setDate(staffCalendarDate.getDate()+7*n);else staffCalendarDate=new Date(staffCalendarDate.getFullYear(),staffCalendarDate.getMonth()+n,15);renderStaffCalendar()};
 const oldForm=window.staffCalendarForm;
 window.staffCalendarForm=function(kind){if(kind==='Shift'){const u=me();if(!u)return;openModal(`<h2>Add agreed shift</h2><label>Date<input type="date" id="sc_start" value="${today()}"></label><label>Note<input id="sc_note"></label><button onclick="staffCalendarSave('Shift','${escx(u.id)}')">Save</button>`);return}oldForm(kind)};
