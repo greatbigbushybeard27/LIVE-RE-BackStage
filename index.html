@@ -787,7 +787,9 @@ data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];
 const SUPABASE_URL='https://ocavwsnobededtjtyrxu.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY='sb_publishable_wRWHfsVX78PdFPMCZqe1TQ_xz27C3W6';
 const REGENCY_ORG_ID='regency-events';
-const supabaseClient=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY,{
+ auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+});
 let cloudSession=null, cloudSyncTimer=null, cloudApplying=false, cloudChannel=null;
 let cloudDirty=false, cloudSyncState='idle', cloudLastError='';
 function cloudIsReady(){return !!(supabaseClient&&cloudSession)}
@@ -854,7 +856,7 @@ function cleanupPortalooEventMirrors(){
 }
 
 function normalizeDataShape(){
- data=data||{};data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];data.users=data.users||[];data.vans=data.vans||[];data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.paChillersEquipment=data.paChillersEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.marqueeJobs=data.marqueeJobs||[];data.events=data.events||[];data.tasks=data.tasks||[];data.hours=data.hours||[];data.expenseClaims=Array.isArray(data.expenseClaims)?data.expenseClaims:[];data.hsCloud=data.hsCloud||{documents:[],videos:[]};data.hsCloud.documents=Array.isArray(data.hsCloud.documents)?data.hsCloud.documents:[];data.hsCloud.videos=Array.isArray(data.hsCloud.videos)?data.hsCloud.videos:[];cleanupPortalooEventMirrors();data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId)u.cloudOnly=true});data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.settings.showClosedHireVehicleBookings=data.settings.showClosedHireVehicleBookings!==false;normalizeStockInventory();data.events.forEach(ensureEventShape);
+ data=data||{};data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];data.users=data.users||[];data.vans=data.vans||[];data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.paChillersEquipment=data.paChillersEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.marqueeJobs=data.marqueeJobs||[];data.events=data.events||[];data.tasks=data.tasks||[];data.hours=data.hours||[];data.expenseClaims=Array.isArray(data.expenseClaims)?data.expenseClaims:[];data.vehicleMaintenance=Array.isArray(data.vehicleMaintenance)?data.vehicleMaintenance:[];data.vehicleDefects=Array.isArray(data.vehicleDefects)?data.vehicleDefects:[];data.hsCloud=data.hsCloud||{documents:[],videos:[]};data.hsCloud.documents=Array.isArray(data.hsCloud.documents)?data.hsCloud.documents:[];data.hsCloud.videos=Array.isArray(data.hsCloud.videos)?data.hsCloud.videos:[];cleanupPortalooEventMirrors();data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId)u.cloudOnly=true});data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.settings.showClosedHireVehicleBookings=data.settings.showClosedHireVehicleBookings!==false;normalizeStockInventory();data.events.forEach(ensureEventShape);
 }
 async function cloudPush(){
  if(!cloudIsReady()||cloudApplying)return false;
@@ -1323,10 +1325,11 @@ window.exportReport=function(key){
 
 /* ---------- Vehicle Maintenance & Defect Management ---------- */
 function maintenanceStore(){
- const s=ensureV51();
- s.vehicleMaintenance=Array.isArray(s.vehicleMaintenance)?s.vehicleMaintenance:[];
- s.vehicleDefects=Array.isArray(s.vehicleDefects)?s.vehicleDefects:[];
- return s;
+ // Maintenance is part of the main Backstage data object, so save() and Lloyd's Brain sync it.
+ data=data||{};
+ data.vehicleMaintenance=Array.isArray(data.vehicleMaintenance)?data.vehicleMaintenance:[];
+ data.vehicleDefects=Array.isArray(data.vehicleDefects)?data.vehicleDefects:[];
+ return data;
 }
 function maintenanceVehicle(id){return (Array.isArray(data.vans)?data.vans:[]).find(v=>String(v.id)===String(id));}
 function maintenanceVehicleName(v){return [v?.name||'Unnamed vehicle',v?.registration||v?.asset||''].filter(Boolean).join(' · ');}
