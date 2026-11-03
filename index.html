@@ -703,6 +703,10 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 .crew-cap-option input:focus-visible{outline:2px solid #6eaa80;outline-offset:3px}
 @media(max-width:480px){.crew-cap-grid{grid-template-columns:1fr}}
 </style>
+
+<style id="v731CrewTypeSelectStyle">
+.crew-type-select{background:#102219!important;color:var(--regency-text)!important;border:1px solid #587463!important;border-radius:8px!important;padding:10px!important;min-width:145px}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -3188,6 +3192,7 @@ async function renderRegularCrewDocuments(){
   const checks=(field,opts)=>opts.map((v,i)=>`<label class="crew-cap-option"><input type="checkbox" ${u[field].includes(v)?'checked':''} onchange="saveCrewCapability('${ce(u.id)}','${field}','${ce(v)}',this.checked)"><span>${ce(v)}</span></label>`).join('');
   return `<div class="card crew-record-card"><h3>${ce(u.name)} <span class="badge">${ce(roleLabel(u.role))}</span></h3>
   <p class="muted">Health & Safety acknowledgements recorded in tracker: ${ackCount}</p>
+  <div class="crew-capabilities"><h3>👷 Crew type</h3><label class="crew-cap-option"><span>Employment category</span><select class="crew-type-select" onchange="setCrewEmploymentType('${ce(u.id)}',this.value)"><option value="Regular Crew" ${((u.staffType||'Regular Crew')==='Regular Crew'||u.staffType==='Full-time')?'selected':''}>Regular Crew</option><option value="Part Time Crew" ${((u.staffType||'')==='Part Time Crew'||u.staffType==='Casual')?'selected':''}>Part Time Crew</option></select></label></div>
   <div class="crew-capabilities"><h3>🧰 Skills &amp; Capabilities</h3><p class="muted small">Director-managed crew roles and qualifications. Certificate uploads and expiry dates remain in the existing document records below.</p>
   <b>Crew roles</b><div class="crew-cap-grid">${checks('crewRoles',roleOptions)}</div>
   <b>Additional qualifications</b><div class="crew-cap-grid">${checks('crewQualifications',qualOptions)}</div></div>
@@ -3417,9 +3422,9 @@ body.light-theme .calendar-view-tabs button.active{background:#2E7D57!important;
  window.staffCalendarForm=function(kind){const u=me();if(!u)return;const target=manager()?(data.users||[]).find(x=>String(x.id)===String(window._scUser||u.id))||u:u;const date=window._scDate||key(new Date());if(kind==='Shift'&&(target.staffType||'Full-time')!=='Casual'&&!manager())return alert('Agreed shifts are for casual staff.');openModal(`<h2>${kind==='Shift'?'Add agreed shift':kind==='Holiday'?'Add holiday':'Mark unavailable'}</h2><p class="muted">${E(target.name)}</p><label>From<input id="sc_start" type="date" value="${date}"></label><label>To<input id="sc_end" type="date" value="${date}"></label><label>Note (optional)<input id="sc_note" maxlength="160"></label><div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="staffCalendarSave('${kind}','${E(target.id)}')">Save</button></div>`)}
  window.staffCalendarSave=function(kind,id){const a=document.getElementById('sc_start').value,b=document.getElementById('sc_end').value,n=document.getElementById('sc_note').value.trim();if(!a||!b||b<a)return alert('Choose a valid date range.');if(kind==='Shift'&&a!==b)return alert('Add agreed shifts one day at a time.');rows().push({id:'sc_'+Date.now(),userId:id,kind,startDate:a,endDate:b,note:n,createdAt:new Date().toISOString()});save();closeModal();renderStaffCalendar()};
  window.staffCalendarDelete=function(id){const u=me(),x=rows().find(r=>r.id===id);if(!x)return;if(String(x.userId)!==String(u?.id)&&!manager())return alert('You can only remove your own entries.');if(!confirm('Remove this calendar entry?'))return;data.staffCalendar=rows().filter(r=>r.id!==id);save();renderStaffCalendar()};
- window.openStaffTypeSettings=function(){const u=me();if(!u)return;openModal(`<h2>Employment type</h2><p class="muted">Directors can set whether a crew member follows the weekday pattern or casual shifts.</p><label>Staff type<select id="sc_type"><option ${((u.staffType||'Full-time')==='Full-time')?'selected':''}>Full-time</option><option ${u.staffType==='Casual'?'selected':''}>Casual</option></select></label><button onclick="if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');currentUser().staffType=document.getElementById('sc_type').value;persist();closeModal();openCrewProfile()">Save</button>`)};
+ window.openStaffTypeSettings=function(){if(!manager())return alert('Director access required.');openRegularCrewRecords()};
  const oldShow=window.showPage;if(oldShow&&!oldShow.__sc){window.showPage=function(p){oldShow.apply(this,arguments);const sc=document.getElementById('staffCalendar');if(sc)sc.classList.toggle('hidden',p!=='staffCalendar');if(p==='staffCalendar')renderStaffCalendar()};window.showPage.__sc=true}
- const oldProfile=window.openCrewProfile;if(oldProfile&&!oldProfile.__sc){window.openCrewProfile=function(){oldProfile.apply(this,arguments);setTimeout(()=>{const b=document.getElementById('modalBody'),u=me();if(!b||!u||!b.innerText.includes('Personal profile')||document.getElementById('scTypeBlock'))return;const d=document.createElement('div');d.id='scTypeBlock';d.className='profile-section';d.innerHTML=`<h3>👷 Employment type</h3><p class="muted">Current: <b>${E(u.staffType||'Full-time')}</b></p><button class="secondary" onclick="openStaffTypeSettings()">Change Full-time / Casual</button>`;const first=b.querySelector('.profile-section');if(first)first.parentNode.insertBefore(d,first);else b.appendChild(d)},0)};window.openCrewProfile.__sc=true}
+ /* Employment category is now managed by Directors in Crew Management. */
 })();
 </script>
 
@@ -3438,6 +3443,12 @@ const arr=k=>{data[k]=Array.isArray(data[k])?data[k]:[];return data[k]};
 const today=()=>new Date().toISOString().slice(0,10);
 const docStore=()=>typeof ensureV51==='function'?ensureV51().documents:[];
 function skills(u){u.crewRoles=Array.isArray(u.crewRoles)?u.crewRoles:[];u.crewQualifications=Array.isArray(u.crewQualifications)?u.crewQualifications:[];return u}
+window.setCrewEmploymentType=function(userId,value){
+ if(!manager())return alert('Director access required.');
+ if(!['Regular Crew','Part Time Crew'].includes(value))return;
+ const u=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u)return;
+ u.staffType=value;save();
+};
 window.saveCrewCapability=function(userId,field,value,checked){
  if(!manager())return alert('Director access required.');
  const u=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u)return;
@@ -3502,23 +3513,64 @@ window.applyStaffRequest=function(id,role){const u=me();if(!u)return;const r=arr
 };
 window.reviewStaffApplication=function(reqId,appId,decision){if(!manager())return alert('Manager access required.');const r=arr('staffRequests').find(x=>x.id===reqId),a=r?.applications.find(x=>x.id===appId);if(!a)return;if(decision==='Accept'){const accepted=r.applications.filter(x=>x.status==='Accepted'&&x.id!==appId&&x.role===a.role);const total=Number(r.required?.[a.role]||0);if(total&&accepted.length>=total)return alert('All '+a.role+' positions are already filled.');a.status='Accepted';staffRows().push({id:'sc_'+Date.now(),userId:a.userId,kind:'Shift',startDate:r.startDate,endDate:r.endDate,note:r.title+' · '+(a.role||'Crew'),requestId:r.id});}else a.status='Declined';save();renderStaffCalendar()};
 window.closeStaffRequest=function(id){if(!manager())return;const r=arr('staffRequests').find(x=>x.id===id);if(r){r.status='Closed';save();renderStaffCalendar()}};
+let staffCalendarView='week',staffCalendarFilter='All Staff',staffCalendarDate=new Date();
+staffCalendarDate.setHours(12,0,0,0);
+function fmtDate(d){return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+function dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function staffType(u){return (u.staffType==='Full-time'||!u.staffType)?'Regular Crew':u.staffType==='Casual'?'Part Time Crew':u.staffType}
+window.setStaffCalendarView=function(v){if(['day','week','month'].includes(v)){staffCalendarView=v;renderStaffCalendar()}};
+window.setStaffCalendarFilter=function(v){staffCalendarFilter=v;renderStaffCalendar()};
 window.renderStaffCalendar=function(){
  const host=document.getElementById('staffCalendar');if(!host)return;const u=me();if(!u){host.innerHTML='<div class="card">Please log in to view the staff calendar.</div>';return}
- const requests=arr('staffRequests'),users=data.users||[],isMgr=manager(),mine=requests.filter(r=>r.status!=='Closed');
- const y=calMonth.getFullYear(),m=calMonth.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),ym=monthKey(calMonth);
- const events=staffRows().filter(x=>x.startDate?.slice(0,7)===ym||x.endDate?.slice(0,7)===ym);
- const full=users.filter(x=>(x.staffType||'Full-time')==='Full-time');
- const visible=isMgr?users: [u];
- const rowsHtml=visible.map(person=>{const pEvents=events.filter(e=>String(e.userId)===String(person.id));const shifts=pEvents.filter(e=>e.kind==='Shift'),leave=pEvents.filter(e=>e.kind!=='Shift');const daysHtml=Array.from({length:days},(_,i)=>{const d=new Date(y,m,i+1,12),k=d.toISOString().slice(0,10),active=shifts.some(e=>k>=e.startDate&&k<=e.endDate),off=leave.some(e=>k>=e.startDate&&k<=e.endDate),weekday=d.getDay()>0&&d.getDay()<6&&((person.staffType||'Full-time')==='Full-time');return `<div class="sc-cell ${off?'sc-off':active?'sc-on':weekday?'sc-weekday':''}" title="${k}">${off?'Away':active?'Shift':weekday?'●':''}</div>`}).join('');return `<div class="sc-person"><b>${escx(person.name)}</b><small>${escx(person.staffType||'Full-time')}</small><div class="sc-track">${daysHtml}</div></div>`}).join('');
- const requestsHtml=mine.map(r=>{const apps=r.applications||[],accepted=apps.filter(a=>a.status==='Accepted').length,applied=apps.filter(a=>a.status==='Pending').length,needed=Object.values(r.required||{}).reduce((s,n)=>s+n,0);const applicable=Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`${role}: ${n}`).join(' · ');return `<div class="card sr-card"><div class="section-head"><div><h3 style="margin:0">${escx(r.title||jobLabel(r.jobId))}</h3><div class="muted small">${r.startDate}${r.endDate!==r.startDate?' to '+r.endDate:''} · ${r.startTime||''}–${r.finishTime||''}</div></div><span class="badge">${accepted}/${needed} filled</span></div><p class="small">${escx(applicable)}${(r.qualifications||[]).length?' · Skills: '+r.qualifications.map(escx).join(', '):''}</p>${r.notes?`<p class="muted small">${escx(r.notes)}</p>`:''}<p class="small muted">${applied} pending applications · ${apps.length} total applications</p>
- ${isMgr?`<details><summary>Review crew applications (${apps.length})</summary>${apps.map(a=>`<div class="sr-app"><b>${escx(a.name)}</b><span class="small muted">${escx(a.role||'Crew')} · ${escx(a.status)}</span>${a.status==='Pending'?`<button onclick="reviewStaffApplication('${r.id}','${a.id}','Accept')">Select</button><button class="secondary" onclick="reviewStaffApplication('${r.id}','${a.id}','Decline')">Decline</button>`:''}</div>`).join('')||'<p class="muted">No applications yet.</p>'}</details><button class="secondary" onclick="closeStaffRequest('${r.id}')">Close request</button>`:`${Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`<button onclick="applyStaffRequest('${r.id}','${escx(role)}')">Request · ${escx(role)}</button>`).join('')}${!(r.qualifications||[]).length&&!Object.values(r.required||{}).some(n=>n>0)?'<button onclick="applyStaffRequest(\''+r.id+'\',\'\')">Request this shift</button>':''}`}</div>`}).join('');
- host.innerHTML=`<style>#staffCalendar .sc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#staffCalendar .sc-person{display:grid;grid-template-columns:110px 1fr;gap:3px 8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--regency-border)}#staffCalendar .sc-person small{grid-column:1;color:var(--regency-muted)}#staffCalendar .sc-track{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:repeat(${days},minmax(8px,1fr));gap:2px;overflow:auto}#staffCalendar .sc-cell{height:27px;border-radius:4px;background:var(--regency-panel-2);font-size:8px;display:flex;align-items:center;justify-content:center;color:var(--regency-muted);min-width:8px}#staffCalendar .sc-weekday{background:#254b35;color:#cfe8d6}#staffCalendar .sc-on{background:#b88935;color:#171717}#staffCalendar .sc-off{background:#a64e4e;color:white}#staffCalendar .sr-card{margin:10px 0}#staffCalendar .sr-app{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--regency-border)}#staffCalendar .sc-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}</style>
- <div class="card"><div class="sc-head"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Crew rota and staffing requests.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${calMonth.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</b><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
- <div class="small muted">🟢 Full-time weekday pattern · 🟡 Confirmed shift · 🔴 Holiday / unavailable</div><div class="sc-month-grid">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<small>${x}</small>`).join('')}</div>${rowsHtml||'<p class="muted">No crew members found.</p>'}
- ${!isMgr?`<div class="actions"><button onclick="staffCalendarForm('Holiday')">＋ Add Holiday</button><button class="secondary" onclick="staffCalendarForm('Unavailable')">＋ Unavailable</button>${(u.staffType||'Full-time')==='Casual'?`<button class="secondary" onclick="staffCalendarForm('Shift')">＋ Add agreed shift</button>`:''}</div>`:''}</div>
+ const isMgr=manager(),requests=arr('staffRequests').filter(r=>r.status!=='Closed');
+ const users=(data.users||[]).filter(x=>x&&x.id&&String(x.name||'').trim().toLowerCase()!=='regency crew').filter(x=>staffCalendarFilter==='All Staff'||staffType(x)===staffCalendarFilter);
+ const visible=isMgr?users:users.filter(x=>String(x.id)===String(u.id));
+ let start=new Date(staffCalendarDate),days=1;
+ if(staffCalendarView==='week'){const offset=(start.getDay()+6)%7;start.setDate(start.getDate()-offset);days=7}
+ if(staffCalendarView==='month'){start=new Date(start.getFullYear(),start.getMonth(),1,12);days=new Date(start.getFullYear(),start.getMonth()+1,0).getDate()}
+ const realDates=Array.from({length:days},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
+ const dates=staffCalendarView==='month'?[...Array((new Date(start.getFullYear(),start.getMonth(),1).getDay()+6)%7).fill(null),...realDates,...Array((7-(realDates.length+((new Date(start.getFullYear(),start.getMonth(),1).getDay()+6)%7))%7)%7).fill(null)]:realDates;
+ const endKey=dayKey(realDates[realDates.length-1]),startKey=dayKey(realDates[0]);
+ const title=staffCalendarView==='day'?fmtDate(start):staffCalendarView==='week'?`${fmtDate(realDates[0])} – ${fmtDate(realDates[6])}`:start.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+ const entries=staffRows().filter(x=>x.startDate<=endKey&&x.endDate>=startKey);
+ const rowsHtml=visible.map(person=>{
+  const type=staffType(person),personEntries=entries.filter(e=>String(e.userId)===String(person.id));
+  const squares=dates.map(d=>{if(!d)return '<div class="sc-bigday blank"></div>';const k=dayKey(d),leave=personEntries.some(e=>e.kind!=='Shift'&&k>=e.startDate&&k<=e.endDate),shift=personEntries.some(e=>e.kind==='Shift'&&k>=e.startDate&&k<=e.endDate),regular=type==='Regular Crew'&&d.getDay()>0&&d.getDay()<6;
+   const cls=leave?'away':shift?'shift':regular?'regular':'empty',label=leave?'OFF':shift?'IN':regular?'IN':'';
+   return `<div class="sc-bigday ${cls}" title="${k} ${label}">${staffCalendarView==='month'?d.getDate()+(label?' · '+label:''):label}</div>`;
+  }).join('');
+  return `<div class="sc-person-row"><div class="sc-person-name"><b>${escx(person.name)}</b><small>${type}</small></div><div class="sc-bigtrack ${staffCalendarView}">${squares}</div></div>`;
+ }).join('');
+ const requestsHtml=requests.map(r=>{const apps=r.applications||[],accepted=apps.filter(a=>a.status==='Accepted').length,applied=apps.filter(a=>a.status==='Pending').length,needed=Object.values(r.required||{}).reduce((s,n)=>s+n,0),applicable=Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`${role}: ${n}`).join(' · ');return `<div class="card sr-card"><div class="section-head"><div><h3 style="margin:0">${escx(r.title||jobLabel(r.jobId))}</h3><div class="muted small">${r.startDate}${r.endDate!==r.startDate?' to '+r.endDate:''} · ${r.startTime||''}–${r.finishTime||''}</div></div><span class="badge">${accepted}/${needed} filled</span></div><p class="small">${escx(applicable)}${(r.qualifications||[]).length?' · Skills: '+r.qualifications.map(escx).join(', '):''}</p>${r.notes?`<p class="muted small">${escx(r.notes)}</p>`:''}<p class="small muted">${applied} pending applications · ${apps.length} total applications</p>${isMgr?`<details><summary>Review crew applications (${apps.length})</summary>${apps.map(a=>`<div class="sr-app"><b>${escx(a.name)}</b><span class="small muted">${escx(a.role||'Crew')} · ${escx(a.status)}</span>${a.status==='Pending'?`<button onclick="reviewStaffApplication('${r.id}','${a.id}','Accept')">Select</button><button class="secondary" onclick="reviewStaffApplication('${r.id}','${a.id}','Decline')">Decline</button>`:''}</div>`).join('')||'<p class="muted">No applications yet.</p>'}</details><button class="secondary" onclick="closeStaffRequest('${r.id}')">Close request</button>`:`${Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`<button onclick="applyStaffRequest('${r.id}','${escx(role)}')">Request · ${escx(role)}</button>`).join('')}`}</div>`}).join('');
+ host.innerHTML=`<style>
+ #staffCalendar .sc-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+ #staffCalendar .sc-person-row{padding:12px 0;border-bottom:1px solid var(--regency-border)}
+ #staffCalendar .sc-person-name{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+ #staffCalendar .sc-person-name b{font-size:16px}#staffCalendar .sc-person-name small{font-size:12px;color:var(--regency-muted)}
+ #staffCalendar .sc-bigtrack{display:grid;gap:5px;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr))}
+ #staffCalendar .sc-bigday{height:42px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;letter-spacing:.3px;border:1px solid rgba(130,160,140,.2);background:#18271f;color:#718278}
+ #staffCalendar .sc-bigtrack.day .sc-bigday{height:58px;font-size:16px}
+ #staffCalendar .sc-bigtrack.month{gap:3px;grid-template-columns:repeat(7,minmax(0,1fr))}#staffCalendar .sc-bigtrack.month .sc-bigday{height:36px;font-size:10px}#staffCalendar .sc-bigday.blank{visibility:hidden}
+ #staffCalendar .sc-bigday.regular{background:#286541;border:1px solid #3e8b5d;color:#f1fff4}
+ #staffCalendar .sc-bigday.shift{background:#367c4d;border:1px solid #5da875;color:white}
+ #staffCalendar .sc-bigday.away{background:#843f43;border:1px solid #bd686d;color:white}
+ #staffCalendar .sc-day-head{display:grid;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr));gap:5px;margin:12px 0 4px}
+ #staffCalendar .sc-day-head span{text-align:center;font-size:11px;font-weight:800;color:var(--regency-muted)}
+ #staffCalendar .sc-filter{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+ #staffCalendar .sc-filter button{padding:8px 11px}
+ #staffCalendar .sc-filter button.active{background:#285c3e;border-color:#4d9568;color:#f1fff4}
+ #staffCalendar .sr-card{margin:10px 0}#staffCalendar .sr-app{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--regency-border)}
+ </style>
+ <div class="card"><div class="sc-toolbar"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Who's in, who's away and confirmed shifts.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${title}</b><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
+ ${isMgr?`<div class="sc-filter">${['All Staff','Regular Crew','Part Time Crew'].map(v=>`<button class="${staffCalendarFilter===v?'active':'secondary'}" onclick="setStaffCalendarFilter('${v}')">${v}</button>`).join('')}</div>`:''}
+ <div class="sc-filter">${['day','week','month'].map(v=>`<button class="${staffCalendarView===v?'active':'secondary'}" onclick="setStaffCalendarView('${v}')">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}</div>
+ <div class="sc-day-head" style="--sc-days:${staffCalendarView==='month'?7:days}">${(staffCalendarView==='month'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:dates).map(d=>`<span>${typeof d==='string'?d:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</span>`).join('')}</div>
+ <div style="--sc-days:${staffCalendarView==='month'?7:days}">${rowsHtml||'<p class="muted">No staff match this filter.</p>'}</div>
+ <div class="sc-filter small"><span style="color:#4e9a68">■ Working / confirmed shift</span><span style="color:#bd686d">■ Holiday / unavailable</span><span style="color:#718278">■ Not scheduled</span></div>
+ ${!isMgr?`<div class="actions"><button onclick="staffCalendarForm('Holiday')">＋ Add Holiday</button><button class="secondary" onclick="staffCalendarForm('Unavailable')">＋ Unavailable</button>${staffType(u)==='Part Time Crew'?`<button class="secondary" onclick="staffCalendarForm('Shift')">＋ Add agreed shift</button>`:''}</div>`:''}</div>
  <div class="card"><div class="section-head"><div><h2>📣 ${isMgr?'Staff Requests':'Available Shifts'}</h2><p class="muted">${isMgr?'Publish extra crew requirements and select applicants.':'Browse shifts and put your name forward.'}</p></div>${isMgr?'<button onclick="staffRequestForm()">＋ New request</button>':''}</div>${requestsHtml||'<p class="muted">No open staffing requests.</p>'}</div>`;
 };
-window.staffCalMove=function(n){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+n,1);renderStaffCalendar()};
+window.staffCalMove=function(n){if(staffCalendarView==='day')staffCalendarDate.setDate(staffCalendarDate.getDate()+n);else if(staffCalendarView==='week')staffCalendarDate.setDate(staffCalendarDate.getDate()+7*n);else staffCalendarDate=new Date(staffCalendarDate.getFullYear(),staffCalendarDate.getMonth()+n,15);renderStaffCalendar()};
 const oldForm=window.staffCalendarForm;
 window.staffCalendarForm=function(kind){if(kind==='Shift'){const u=me();if(!u)return;openModal(`<h2>Add agreed shift</h2><label>Date<input type="date" id="sc_start" value="${today()}"></label><label>Note<input id="sc_note"></label><button onclick="staffCalendarSave('Shift','${escx(u.id)}')">Save</button>`);return}oldForm(kind)};
 patchDocs();
