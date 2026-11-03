@@ -3395,6 +3395,101 @@ body.light-theme .calendar-view-tabs button.active{background:#2E7D57!important;
 })();
 </script>
 
+
+<script>
+/* V71.29 Crew scheduling, shift requests, skills and certificate expiry */
+(function(){
+'use strict';
+const roles=['General Crew','Drivers','Sound Tech','Lighting Tech'];
+const quals=['MEWP','Telehandler','CAT C Driver','Forklift'];
+const escx=v=>typeof esc==='function'?esc(String(v??'')):String(v??'');
+const me=()=>typeof currentUser==='function'?currentUser():null;
+const manager=()=>typeof isDirector==='function'&&isDirector();
+const save=()=>{if(typeof persist==='function')persist();else if(typeof saveData==='function')saveData()};
+const arr=k=>{data[k]=Array.isArray(data[k])?data[k]:[];return data[k]};
+const today=()=>new Date().toISOString().slice(0,10);
+const docStore=()=>typeof ensureV51==='function'?ensureV51().documents:[];
+function skills(u){u.crewRoles=Array.isArray(u.crewRoles)?u.crewRoles:[];u.crewQualifications=Array.isArray(u.crewQualifications)?u.crewQualifications:[];return u}
+function skillEditor(u){skills(u);return `<div class="profile-section" id="crewSkillsBlock"><h3>🧰 Skills &amp; Capabilities</h3><p class="muted">Select the crew roles and qualifications you can undertake. Add certificates and expiry dates in My Documents.</p><b>Crew roles</b><div class="create-grid">${roles.map(x=>`<label class="small"><input type="checkbox" ${u.crewRoles.includes(x)?'checked':''} onchange="crewSkillToggle('crewRoles','${x}',this.checked)"> ${x}</label>`).join('')}</div><b style="display:block;margin-top:12px">Additional qualifications</b><div class="create-grid">${quals.map(x=>`<label class="small"><input type="checkbox" ${u.crewQualifications.includes(x)?'checked':''} onchange="crewSkillToggle('crewQualifications','${x}',this.checked)"> ${x}</label>`).join('')}</div></div>`}
+window.crewSkillToggle=function(field,value,on){const u=me();if(!u)return;skills(u);u[field]=on?[...new Set([...u[field],value])]:u[field].filter(x=>x!==value);save()};
+function expiryStatus(doc){if(!doc.expiryDate)return 'Expiry not entered';const days=Math.ceil((new Date(doc.expiryDate+'T23:59:59')-new Date())/86400000);return days<0?'Expired':days<=30?'Expires soon':'Valid'}
+window.setCrewDocExpiry=function(id,v){const d=docStore().find(x=>String(x.id)===String(id));if(!d)return;d.expiryDate=v||'';save();renderMyDocuments();};
+window.setCrewDocQualification=function(id,v){const d=docStore().find(x=>String(x.id)===String(id));if(!d)return;d.qualification=v||'';save();renderMyDocuments();};
+function patchDocs(){
+ if(typeof window.renderMyDocuments!=='function'||window.renderMyDocuments.__v729)return;
+ const old=window.renderMyDocuments;
+ window.renderMyDocuments=async function(){await old.apply(this,arguments);const u=me(),el=document.getElementById('v51DocList');if(!u||!el)return;
+ el.querySelectorAll('.v51-file-row').forEach(row=>{const btn=row.querySelector('button[onclick^="viewV51File"]');if(!btn)return;const id=(btn.getAttribute('onclick').match(/'([^']+)'/)||[])[1],doc=docStore().find(x=>String(x.id)===String(id));if(!doc)return;
+ if(!['certificate','qualification','driving_licence'].includes(doc.type))return;
+ if(row.querySelector('.v729-doc-meta'))return;
+ const meta=document.createElement('div');meta.className='v729-doc-meta';meta.style.cssText='margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap';
+ const opts=['MEWP','Telehandler','CAT C Driver','Forklift'].map(q=>`<option ${doc.qualification===q?'selected':''}>${q}</option>`).join('');
+ meta.innerHTML=`<label class="small">Qualification <select onchange="setCrewDocQualification('${escx(id)}',this.value)"><option value="">Select if relevant</option>${opts}</select></label><label class="small">Expiry <input type="date" value="${escx(doc.expiryDate||'')}" onchange="setCrewDocExpiry('${escx(id)}',this.value)"></label><span class="small">${expiryStatus(doc)}</span>`;
+ row.firstElementChild?.appendChild(meta);
+ });
+ };window.renderMyDocuments.__v729=true;
+}
+const oldOpen=window.openCrewProfile;
+if(oldOpen&&!oldOpen.__v729){window.openCrewProfile=function(){oldOpen.apply(this,arguments);setTimeout(()=>{const body=document.getElementById('modalBody'),u=me();if(!body||!u||!body.innerText.includes('Personal profile')||body.querySelector('#crewSkillsBlock'))return;const block=document.createElement('div');block.innerHTML=skillEditor(u);const docs=[...body.querySelectorAll('.profile-section')].find(x=>x.innerText.includes('My Documents'));if(docs)docs.parentNode.insertBefore(block.firstElementChild,docs);else body.appendChild(block.firstElementChild)},20)};window.openCrewProfile.__v729=true}
+function staffRows(){return arr('staffCalendar')}
+function monthKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
+let calMonth=new Date();calMonth.setDate(1);
+function jobLabel(id){const all=[...(data.events||[]),...(data.jobs||[]),...(data.portalooJobs||[])];const j=all.find(x=>String(x.id)===String(id));return j?.name||j?.title||'Staffing request'}
+function staffRequestForm(){
+ const jobs=[...(data.events||[]),...(data.jobs||[]),...(data.portalooJobs||[])];
+ openModal(`<h2>＋ Request additional staff</h2><p class="muted">Create a staffing request linked to a job.</p>
+ <label>Job<select id="sr_job"><option value="">Standalone / other</option>${jobs.map(j=>`<option value="${escx(j.id)}">${escx(j.name||j.title||'Job')}</option>`).join('')}</select></label>
+ <label>Request title<input id="sr_title" placeholder="e.g. Festival build crew"></label>
+ <div class="create-grid"><label>Start date<input id="sr_start" type="date" value="${today()}"></label><label>End date<input id="sr_end" type="date" value="${today()}"></label></div>
+ <div class="create-grid"><label>Start time<input id="sr_time" type="time" value="08:00"></label><label>Finish time<input id="sr_finish" type="time" value="17:00"></label></div>
+ <b>Additional people required</b>${roles.map((r,i)=>`<label>${r}<input type="number" min="0" max="100" id="sr_role_${i}" value="0"></label>`).join('')}
+ <b>Qualifications required</b><div class="create-grid">${quals.map((q,i)=>`<label><input type="checkbox" id="sr_qual_${i}"> ${q}</label>`).join('')}</div>
+ <label>Notes<textarea id="sr_notes" rows="2" placeholder="Work details, location, clothing, etc."></textarea></label>
+ <div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="saveStaffRequest()">Publish request</button></div>`);
+}
+window.saveStaffRequest=function(){
+ const start=document.getElementById('sr_start').value,end=document.getElementById('sr_end').value;if(!start||!end||end<start)return alert('Please enter a valid date range.');
+ const required={};roles.forEach((r,i)=>required[r]=Math.max(0,Number(document.getElementById('sr_role_'+i).value)||0));
+ const qualifications=quals.filter((q,i)=>document.getElementById('sr_qual_'+i).checked);
+ if(!Object.values(required).some(x=>x>0)&&!qualifications.length)return alert('Enter at least one crew requirement or qualification.');
+ const jobId=document.getElementById('sr_job').value,title=document.getElementById('sr_title').value.trim()||jobLabel(jobId);
+ arr('staffRequests').push({id:'req_'+Date.now(),jobId,title,startDate:start,endDate:end,startTime:document.getElementById('sr_time').value,finishTime:document.getElementById('sr_finish').value,required,qualifications,notes:document.getElementById('sr_notes').value,status:'Open',applications:[],createdBy:me()?.id,createdAt:new Date().toISOString()});
+ save();closeModal();renderStaffCalendar();
+};
+window.applyStaffRequest=function(id,role){const u=me();if(!u)return;const r=arr('staffRequests').find(x=>x.id===id);if(!r)return;skills(u);
+ if(role&&!u.crewRoles.includes(role))return alert('Your profile does not list '+role+'. Update Skills & Capabilities first.');
+ const missing=(r.qualifications||[]).filter(q=>!u.crewQualifications.includes(q));
+ const docs=docStore().filter(d=>d.userId===u.id&&d.qualification);
+ const invalid=(r.qualifications||[]).filter(q=>{const d=docs.find(x=>x.qualification===q);return !d||!d.expiryDate||expiryStatus(d)!=='Valid'});
+ if(missing.length||invalid.length)return alert('Your profile does not show all required qualifications with valid certificate expiry dates: '+[...new Set([...missing,...invalid])].join(', ')+'. Please update My Profile / My Documents.');
+ const existing=r.applications.find(a=>String(a.userId)===String(u.id));if(existing)return alert('You have already requested this shift.');
+ r.applications.push({id:'app_'+Date.now(),userId:u.id,name:u.name,role:role||'',status:'Pending',appliedAt:new Date().toISOString()});save();renderStaffCalendar();alert('Shift request sent to management.');
+};
+window.reviewStaffApplication=function(reqId,appId,decision){if(!manager())return alert('Manager access required.');const r=arr('staffRequests').find(x=>x.id===reqId),a=r?.applications.find(x=>x.id===appId);if(!a)return;if(decision==='Accept'){const accepted=r.applications.filter(x=>x.status==='Accepted'&&x.id!==appId&&x.role===a.role);const total=Number(r.required?.[a.role]||0);if(total&&accepted.length>=total)return alert('All '+a.role+' positions are already filled.');a.status='Accepted';staffRows().push({id:'sc_'+Date.now(),userId:a.userId,kind:'Shift',startDate:r.startDate,endDate:r.endDate,note:r.title+' · '+(a.role||'Crew'),requestId:r.id});}else a.status='Declined';save();renderStaffCalendar()};
+window.closeStaffRequest=function(id){if(!manager())return;const r=arr('staffRequests').find(x=>x.id===id);if(r){r.status='Closed';save();renderStaffCalendar()}};
+window.renderStaffCalendar=function(){
+ const host=document.getElementById('staffCalendar');if(!host)return;const u=me();if(!u){host.innerHTML='<div class="card">Please log in to view the staff calendar.</div>';return}
+ const requests=arr('staffRequests'),users=data.users||[],isMgr=manager(),mine=requests.filter(r=>r.status!=='Closed');
+ const y=calMonth.getFullYear(),m=calMonth.getMonth(),first=new Date(y,m,1),offset=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate(),ym=monthKey(calMonth);
+ const events=staffRows().filter(x=>x.startDate?.slice(0,7)===ym||x.endDate?.slice(0,7)===ym);
+ const full=users.filter(x=>(x.staffType||'Full-time')==='Full-time');
+ const visible=isMgr?users: [u];
+ const rowsHtml=visible.map(person=>{const pEvents=events.filter(e=>String(e.userId)===String(person.id));const shifts=pEvents.filter(e=>e.kind==='Shift'),leave=pEvents.filter(e=>e.kind!=='Shift');const daysHtml=Array.from({length:days},(_,i)=>{const d=new Date(y,m,i+1,12),k=d.toISOString().slice(0,10),active=shifts.some(e=>k>=e.startDate&&k<=e.endDate),off=leave.some(e=>k>=e.startDate&&k<=e.endDate),weekday=d.getDay()>0&&d.getDay()<6&&((person.staffType||'Full-time')==='Full-time');return `<div class="sc-cell ${off?'sc-off':active?'sc-on':weekday?'sc-weekday':''}" title="${k}">${off?'Away':active?'Shift':weekday?'●':''}</div>`}).join('');return `<div class="sc-person"><b>${escx(person.name)}</b><small>${escx(person.staffType||'Full-time')}</small><div class="sc-track">${daysHtml}</div></div>`}).join('');
+ const requestsHtml=mine.map(r=>{const apps=r.applications||[],accepted=apps.filter(a=>a.status==='Accepted').length,applied=apps.filter(a=>a.status==='Pending').length,needed=Object.values(r.required||{}).reduce((s,n)=>s+n,0);const applicable=Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`${role}: ${n}`).join(' · ');return `<div class="card sr-card"><div class="section-head"><div><h3 style="margin:0">${escx(r.title||jobLabel(r.jobId))}</h3><div class="muted small">${r.startDate}${r.endDate!==r.startDate?' to '+r.endDate:''} · ${r.startTime||''}–${r.finishTime||''}</div></div><span class="badge">${accepted}/${needed} filled</span></div><p class="small">${escx(applicable)}${(r.qualifications||[]).length?' · Skills: '+r.qualifications.map(escx).join(', '):''}</p>${r.notes?`<p class="muted small">${escx(r.notes)}</p>`:''}<p class="small muted">${applied} pending applications · ${apps.length} total applications</p>
+ ${isMgr?`<details><summary>Review crew applications (${apps.length})</summary>${apps.map(a=>`<div class="sr-app"><b>${escx(a.name)}</b><span class="small muted">${escx(a.role||'Crew')} · ${escx(a.status)}</span>${a.status==='Pending'?`<button onclick="reviewStaffApplication('${r.id}','${a.id}','Accept')">Select</button><button class="secondary" onclick="reviewStaffApplication('${r.id}','${a.id}','Decline')">Decline</button>`:''}</div>`).join('')||'<p class="muted">No applications yet.</p>'}</details><button class="secondary" onclick="closeStaffRequest('${r.id}')">Close request</button>`:`${Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`<button onclick="applyStaffRequest('${r.id}','${escx(role)}')">Request · ${escx(role)}</button>`).join('')}${!(r.qualifications||[]).length&&!Object.values(r.required||{}).some(n=>n>0)?'<button onclick="applyStaffRequest(\''+r.id+'\',\'\')">Request this shift</button>':''}`}</div>`}).join('');
+ host.innerHTML=`<style>#staffCalendar .sc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}#staffCalendar .sc-person{display:grid;grid-template-columns:110px 1fr;gap:3px 8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--regency-border)}#staffCalendar .sc-person small{grid-column:1;color:var(--regency-muted)}#staffCalendar .sc-track{grid-column:2;grid-row:1/3;display:grid;grid-template-columns:repeat(${days},minmax(8px,1fr));gap:2px;overflow:auto}#staffCalendar .sc-cell{height:27px;border-radius:4px;background:var(--regency-panel-2);font-size:8px;display:flex;align-items:center;justify-content:center;color:var(--regency-muted);min-width:8px}#staffCalendar .sc-weekday{background:#254b35;color:#cfe8d6}#staffCalendar .sc-on{background:#b88935;color:#171717}#staffCalendar .sc-off{background:#a64e4e;color:white}#staffCalendar .sr-card{margin:10px 0}#staffCalendar .sr-app{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--regency-border)}#staffCalendar .sc-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}</style>
+ <div class="card"><div class="sc-head"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Crew rota and staffing requests.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${calMonth.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</b><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
+ <div class="small muted">🟢 Full-time weekday pattern · 🟡 Confirmed shift · 🔴 Holiday / unavailable</div><div class="sc-month-grid">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(x=>`<small>${x}</small>`).join('')}</div>${rowsHtml||'<p class="muted">No crew members found.</p>'}
+ ${!isMgr?`<div class="actions"><button onclick="staffCalendarForm('Holiday')">＋ Add Holiday</button><button class="secondary" onclick="staffCalendarForm('Unavailable')">＋ Unavailable</button>${(u.staffType||'Full-time')==='Casual'?`<button class="secondary" onclick="staffCalendarForm('Shift')">＋ Add agreed shift</button>`:''}</div>`:''}</div>
+ <div class="card"><div class="section-head"><div><h2>📣 ${isMgr?'Staff Requests':'Available Shifts'}</h2><p class="muted">${isMgr?'Publish extra crew requirements and select applicants.':'Browse shifts and put your name forward.'}</p></div>${isMgr?'<button onclick="staffRequestForm()">＋ New request</button>':''}</div>${requestsHtml||'<p class="muted">No open staffing requests.</p>'}</div>`;
+};
+window.staffCalMove=function(n){calMonth=new Date(calMonth.getFullYear(),calMonth.getMonth()+n,1);renderStaffCalendar()};
+const oldForm=window.staffCalendarForm;
+window.staffCalendarForm=function(kind){if(kind==='Shift'){const u=me();if(!u)return;openModal(`<h2>Add agreed shift</h2><label>Date<input type="date" id="sc_start" value="${today()}"></label><label>Note<input id="sc_note"></label><button onclick="staffCalendarSave('Shift','${escx(u.id)}')">Save</button>`);return}oldForm(kind)};
+patchDocs();
+})();
+</script>
+
 </body></html>
 
 
