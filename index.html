@@ -2688,7 +2688,7 @@ normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));render();
 initCloud().then(()=>{if(!loggedIn())setTimeout(showLoginOverlay,250);}).catch(e=>{console.error('Cloud init failed',e);if(!loggedIn())setTimeout(showLoginOverlay,250);});
 setTimeout(updateGoogleSyncUI,300);
 const headerCrewButton=document.getElementById('headerCrewButton');
-if(headerCrewButton)headerCrewButton.addEventListener('click',showLoginOverlay);
+if(headerCrewButton)headerCrewButton.addEventListener('click',()=>{if(currentUser())openCrewProfile();else showLoginOverlay();});
 
 function openHeaderSearch(){showPage('equipment');setTimeout(()=>{const e=document.getElementById('eqSearch');if(e){e.focus();e.select();}},80)}
 async function scanHeaderQR(){
