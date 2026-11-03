@@ -1312,12 +1312,12 @@ function renderVehicleMaintenance(){
  const el=document.getElementById('vehicleMaintenance');if(!el)return;
  const s=maintenanceStore(),vans=(Array.isArray(data.vans)?data.vans:[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
  const today=new Date().toISOString().slice(0,10),soon=new Date(Date.now()+14*86400000).toISOString().slice(0,10);
- s.vehicleMaintenance.filter(x=>x.status==='Planned'&&x.date&&x.date<=soon).forEach(x=>{const v=maintenanceVehicle(x.vehicleId);if(typeof addNotification==='function')addNotification(x.date<today?'warning':'info',x.date<today?'Vehicle maintenance overdue':'Vehicle maintenance due soon',`${v?.name||'Vehicle'}: ${x.type} scheduled for ${x.date}.`,'vehicle-service-due-'+x.id);});
+ s.vehicleMaintenance.filter(x=>x&&x.status==='Planned'&&x.date&&x.date<=soon).forEach(x=>{const v=maintenanceVehicle(x.vehicleId);if(typeof addNotification==='function')addNotification(x.date<today?'warning':'info',x.date<today?'Vehicle maintenance overdue':'Vehicle maintenance due soon',`${v?.name||'Vehicle'}: ${x.type} scheduled for ${x.date}.`,'vehicle-service-due-'+x.id);});
  const selected=window._maintenanceVehicleId||vans[0]?.id||'';
  if(!window._maintenanceVehicleId)window._maintenanceVehicleId=selected;
  const vehicle=maintenanceVehicle(selected);
- const services=s.vehicleMaintenance.filter(x=>String(x.vehicleId)===String(selected)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
- const defects=s.vehicleDefects.filter(x=>String(x.vehicleId)===String(selected)).sort((a,b)=>(b.reportedAt||'').localeCompare(a.reportedAt||''));
+ const services=s.vehicleMaintenance.filter(x=>x&&String(x.vehicleId)===String(selected)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+ const defects=s.vehicleDefects.filter(x=>x&&String(x.vehicleId)===String(selected)).sort((a,b)=>(b.reportedAt||'').localeCompare(a.reportedAt||''));
  const open=defects.filter(d=>d.status!=='Closed');
  const due=services.filter(x=>x.status==='Planned');
  const critical=open.filter(d=>d.priority==='Critical').length;
@@ -1420,9 +1420,16 @@ function showPage(page){
    if(el)el.classList.toggle('hidden',id!==page);
  });
  if(page==='scanner')startScan();else stopScan();
- render();
+ try{render();}catch(renderError){console.error('Shared render error',renderError);}
  if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem reading the records. Please refresh and try again.</p><p class="muted">The live records have not been changed.</p></div>';}}
- if(page==='vehicleMaintenance')renderVehicleMaintenance();
+ if(page==='vehicleMaintenance'){
+   const maintenanceEl=document.getElementById('vehicleMaintenance');
+   if(maintenanceEl)maintenanceEl.classList.remove('hidden');
+   try{renderVehicleMaintenance();}catch(maintenanceError){
+     console.error('Vehicle Maintenance render failed',maintenanceError);
+     if(maintenanceEl)maintenanceEl.innerHTML='<div class="card"><h2>🔧 Vehicle Maintenance</h2><p>Vehicle Maintenance could not load its records.</p><p class="muted">Please check the app console for the error. Existing vehicle and job records have not been changed.</p></div>';
+   }
+ }
  if(page==='windForecast')loadWindForecast();
  window.scrollTo({top:0,behavior:'smooth'});
 }
