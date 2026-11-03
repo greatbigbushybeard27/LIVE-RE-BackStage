@@ -1453,7 +1453,7 @@ function showPage(page){
    if(maintenanceEl)maintenanceEl.classList.remove('hidden');
    try{renderVehicleMaintenance();}catch(maintenanceError){
      console.error('Vehicle Maintenance render failed',maintenanceError);
-     if(maintenanceEl)maintenanceEl.innerHTML='<div class="card"><h2>🔧 Vehicle Maintenance</h2><p>Vehicle Maintenance could not load its records.</p><p class="muted">Please check the app console for the error. Existing vehicle and job records have not been changed.</p></div>';
+     if(maintenanceEl)maintenanceEl.innerHTML='<div class="card"><h2>🔧 Vehicle Maintenance</h2><p>Vehicle Maintenance could not load its records.</p><p class="muted">Diagnostic: '+String(maintenanceError&&maintenanceError.message||maintenanceError||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><p class="muted">Your cloud connection is separate; no vehicle or job records have been changed by this error.</p><button class="secondary" onclick="renderVehicleMaintenance()">Try again</button></div>';
    }
  }
  if(page==='windForecast')loadWindForecast();
