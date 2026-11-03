@@ -1323,123 +1323,137 @@ window.exportReport=function(key){
 };
 
 
-/* ---------- Vehicle Maintenance & Defect Management ---------- */
-function maintenanceStore(){
- // Maintenance is part of the main Backstage data object, so save() and Lloyd's Brain sync it.
- data=data||{};
- data.vehicleMaintenance=Array.isArray(data.vehicleMaintenance)?data.vehicleMaintenance:[];
- data.vehicleDefects=Array.isArray(data.vehicleDefects)?data.vehicleDefects:[];
- return data;
-}
-function maintenanceVehicle(id){return (Array.isArray(data.vans)?data.vans:[]).find(v=>String(v.id)===String(id));}
-function maintenanceVehicleName(v){return [v?.name||'Unnamed vehicle',v?.registration||v?.asset||''].filter(Boolean).join(' · ');}
-function maintenanceCanSignOff(){
- const u=me()||{},r=String(u.role||u.access||'').toLowerCase();
- return (typeof isDirector==='function'&&isDirector())||r.includes('manager')||r.includes('director');
-}
-function renderVehicleMaintenance(){
- const el=document.getElementById('vehicleMaintenance');if(!el)return;
- const s=maintenanceStore(),vans=(Array.isArray(data.vans)?data.vans:[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
- const today=new Date().toISOString().slice(0,10),soon=new Date(Date.now()+14*86400000).toISOString().slice(0,10);
- s.vehicleMaintenance.filter(x=>x&&x.status==='Planned'&&x.date&&x.date<=soon).forEach(x=>{const v=maintenanceVehicle(x.vehicleId);if(typeof addNotification==='function')addNotification(x.date<today?'warning':'info',x.date<today?'Vehicle maintenance overdue':'Vehicle maintenance due soon',`${v?.name||'Vehicle'}: ${x.type} scheduled for ${x.date}.`,'vehicle-service-due-'+x.id);});
- const selected=window._maintenanceVehicleId||vans[0]?.id||'';
- if(!window._maintenanceVehicleId)window._maintenanceVehicleId=selected;
- const vehicle=maintenanceVehicle(selected);
- const services=s.vehicleMaintenance.filter(x=>x&&String(x.vehicleId)===String(selected)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
- const defects=s.vehicleDefects.filter(x=>x&&String(x.vehicleId)===String(selected)).sort((a,b)=>(b.reportedAt||'').localeCompare(a.reportedAt||''));
- const open=defects.filter(d=>d.status!=='Closed');
- const due=services.filter(x=>x.status==='Planned');
- const critical=open.filter(d=>d.priority==='Critical').length;
- el.innerHTML=`<style>
- #vehicleMaintenance .vm-hero{background:linear-gradient(135deg,#10251b,#142d21);border:1px solid #315440;border-radius:18px;padding:18px;margin-bottom:14px}
- #vehicleMaintenance .vm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
- #vehicleMaintenance .vm-stat{background:#14251d;border:1px solid #294536;border-radius:14px;padding:13px}
- #vehicleMaintenance .vm-panel{background:#101d16;border:1px solid #294536;border-radius:15px;padding:15px;margin:12px 0}
- #vehicleMaintenance .vm-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
- #vehicleMaintenance .vm-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#b8c9bf}
- #vehicleMaintenance input,#vehicleMaintenance select,#vehicleMaintenance textarea{width:100%;min-width:0;background:#0b1510;color:#edf5ef;border:1px solid #355343;border-radius:9px;padding:10px}
- #vehicleMaintenance textarea{min-height:76px}
- #vehicleMaintenance .vm-record{background:#14251d;border:1px solid #294536;border-radius:12px;padding:13px;margin:9px 0}
- #vehicleMaintenance .vm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
- #vehicleMaintenance .vm-pill{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:#26382e;color:#d9eee0}
- #vehicleMaintenance .vm-pill.critical{background:#542727;color:#ffb7b7}
- #vehicleMaintenance .vm-pill.high{background:#503719;color:#ffdb9b}
- #vehicleMaintenance .vm-pill.done{background:#173d2c;color:#b8f2cc}
- #vehicleMaintenance .vm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
- @media(max-width:650px){#vehicleMaintenance .vm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#vehicleMaintenance .vm-form{grid-template-columns:1fr}}
- </style>
- <div class="vm-hero"><h2 style="margin:0 0 5px">🔧 Vehicle Maintenance</h2><div class="muted">Service history, planned work and vehicle defect tracking. MOT records are not included.</div></div>
- <div class="vm-panel"><label style="display:block;margin-bottom:7px">Select vehicle</label><select id="vmVehicle" onchange="selectMaintenanceVehicle(this.value)">${vans.map(v=>`<option value="${escV(v.id)}" ${String(v.id)===String(selected)?'selected':''}>${escV(maintenanceVehicleName(v))}</option>`).join('')}</select>
- ${vehicle?`<div class="vm-row" style="margin-top:12px"><div><b style="font-size:18px">${escV(vehicle.name||'Unnamed vehicle')}</b><div class="muted">${escV(vehicle.registration||vehicle.asset||'Registration not recorded')}</div></div><span class="vm-pill ${vehicle.maintenanceHold?'critical':'done'}">${vehicle.maintenanceHold?'OUT OF SERVICE':'IN FLEET'}</span></div>`:'<p class="muted">No fleet vehicles found. Add vehicles to Equipment first.</p>'}</div>
- <div class="vm-grid">
- <div class="vm-stat"><b style="font-size:25px">${services.length}</b><div class="muted small">Service records</div></div>
- <div class="vm-stat"><b style="font-size:25px">${due.length}</b><div class="muted small">Planned work</div></div>
- <div class="vm-stat"><b style="font-size:25px;color:${open.length?'#f2c66d':'#b8f2cc'}">${open.length}</b><div class="muted small">Open defects</div></div>
- </div>
- ${critical?`<div class="vm-panel" style="border-color:#a33;background:#321b1b"><b style="color:#ffb7b7">⛔ ${critical} critical defect(s)</b><div class="muted">This vehicle is marked out of service until authorised sign-off.</div></div>`:''}
- <div class="vm-panel"><h3 style="margin-top:0">＋ Add service or planned work</h3>
- <form class="vm-form" onsubmit="saveVehicleService(event)">
- <label>Work type<select name="type"><option>Routine service</option><option>Repair</option><option>Tyres</option><option>Brakes</option><option>Fluids</option><option>Inspection</option><option>Other</option></select></label>
- <label>Record status<select name="status"><option value="Planned">To be done</option><option value="Completed">Completed</option></select></label>
- <label>Date<input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></label>
- <label>Mileage<input name="mileage" type="number" min="0" placeholder="Mileage at service"></label>
- <label>Garage / mechanic<input name="provider" placeholder="Who is doing the work?"></label>
- <label>Next service date<input name="nextDate" type="date"></label>
- <label>Parts cost (£)<input name="partsCost" type="number" min="0" step="0.01"></label>
- <label>Labour cost (£)<input name="labourCost" type="number" min="0" step="0.01"></label>
- <label style="grid-column:1/-1">Work required / completed<textarea name="description" required placeholder="Describe the work, parts used and any notes"></textarea></label>
- <label style="grid-column:1/-1">Next service mileage<input name="nextMileage" type="number" min="0" placeholder="Optional"></label>
- <div style="grid-column:1/-1"><button type="submit">Save service record</button></div>
- </form></div>
- <div class="vm-panel"><h3 style="margin-top:0">⚠️ Report a vehicle problem</h3>
- <form class="vm-form" onsubmit="saveVehicleDefect(event)">
- <label>Problem priority<select name="priority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
- <label>Reported mileage<input name="mileage" type="number" min="0" placeholder="Current mileage"></label>
- <label style="grid-column:1/-1">Problem / symptoms<textarea name="description" required placeholder="What is wrong with the vehicle?"></textarea></label>
- <label>Location<input name="location" placeholder="Where is the vehicle?"></label>
- <label>Assign to<input name="assignedTo" placeholder="Mechanic / person responsible"></label>
- <div style="grid-column:1/-1"><button type="submit" class="danger">＋ Submit defect report</button></div>
- </form><div class="small muted" style="margin-top:8px">Critical defects automatically place the vehicle out of service. Do not use a vehicle with a safety-critical defect.</div></div>
- <div class="vm-panel"><h3 style="margin-top:0">Service history & planned work</h3>${services.length?services.map(x=>`<div class="vm-record"><div class="vm-row"><b>${escV(x.type)} · ${escV(x.date)}</b><span class="vm-pill ${x.status==='Completed'?'done':''}">${escV(x.status)}</span></div><div style="margin-top:6px">${escV(x.description)}</div><div class="muted small" style="margin-top:5px">${x.mileage?`Mileage: ${escV(x.mileage)} · `:''}${x.provider?`Provider: ${escV(x.provider)} · `:''}Parts £${Number(x.partsCost||0).toFixed(2)} · Labour £${Number(x.labourCost||0).toFixed(2)}</div>${x.nextDate||x.nextMileage?`<div class="small" style="margin-top:5px;color:#b8f2cc">Next service: ${escV(x.nextDate||'Date not set')}${x.nextMileage?' · '+escV(x.nextMileage)+' miles':''}</div>`:''}</div>`).join(''):'<div class="empty">No service records for this vehicle yet.</div>'}</div>
- <div class="vm-panel"><h3 style="margin-top:0">Defect reports</h3>${defects.length?defects.map(d=>`<div class="vm-record"><div class="vm-row"><b>Defect #${escV(d.id)}</b><span class="vm-pill ${d.priority==='Critical'?'critical':d.priority==='High'?'high':d.status==='Closed'?'done':''}">${escV(d.priority)} · ${escV(d.status)}</span></div><div class="small muted">${escV(new Date(d.reportedAt).toLocaleString('en-GB'))} · ${escV(d.reportedBy||'Crew member')}${d.mileage?' · '+escV(d.mileage)+' miles':''}</div><p>${escV(d.description)}</p>${d.location?`<div class="small muted">Location: ${escV(d.location)}</div>`:''}${d.assignedTo?`<div class="small muted">Assigned to: ${escV(d.assignedTo)}</div>`:''}${d.repairNotes?`<div class="small">Repair: ${escV(d.repairNotes)}</div>`:''}${d.checkedBy?`<div class="small muted">Signed off by ${escV(d.checkedBy)} · ${escV(d.closedAt||'')}</div>`:''}
- <div class="vm-actions">${d.status==='Open'?`<button class="secondary" onclick="updateVehicleDefect('${escV(d.id)}','In Progress')">Assign / start work</button>`:''}${d.status==='In Progress'?`<button class="secondary" onclick="completeVehicleDefect('${escV(d.id)}')">Mark repair complete</button>`:''}${d.status==='Awaiting Check'?(maintenanceCanSignOff()?`<button onclick="signOffVehicleDefect('${escV(d.id)}')">Check &amp; sign off</button>`:'<span class="small muted">Awaiting authorised sign-off</span>'):''}</div></div>`).join(''):'<div class="empty">No reported problems for this vehicle.</div>'}</div>`;
-}
-window.selectMaintenanceVehicle=function(id){window._maintenanceVehicleId=id;renderVehicleMaintenance();};
-window.saveVehicleService=function(e){
- e.preventDefault();const f=e.target,s=maintenanceStore(),v=maintenanceVehicle(window._maintenanceVehicleId);if(!v)return;
- const fd=new FormData(f),record={id:makeId('svc'),vehicleId:v.id,type:String(fd.get('type')||'Other'),status:String(fd.get('status')||'Planned'),date:String(fd.get('date')||''),mileage:String(fd.get('mileage')||''),provider:String(fd.get('provider')||''),nextDate:String(fd.get('nextDate')||''),nextMileage:String(fd.get('nextMileage')||''),partsCost:Number(fd.get('partsCost')||0),labourCost:Number(fd.get('labourCost')||0),description:String(fd.get('description')||''),createdAt:new Date().toISOString(),createdBy:(me()||{}).name||'Crew'};
- s.vehicleMaintenance.unshift(record);persist();if(typeof addNotification==='function')addNotification('info','Vehicle service record added',`${v.name||'Vehicle'}: ${record.type} recorded.`,'vehicle-service-'+record.id);renderVehicleMaintenance();
-};
-window.saveVehicleDefect=function(e){
- e.preventDefault();const f=e.target,s=maintenanceStore(),v=maintenanceVehicle(window._maintenanceVehicleId);if(!v)return;
- const fd=new FormData(f),priority=String(fd.get('priority')||'Low'),d={id:makeId('def'),vehicleId:v.id,priority,status:'Open',description:String(fd.get('description')||''),mileage:String(fd.get('mileage')||''),location:String(fd.get('location')||''),assignedTo:String(fd.get('assignedTo')||''),reportedAt:new Date().toISOString(),reportedBy:(me()||{}).name||'Crew',repairNotes:'',createdAt:new Date().toISOString()};
- s.vehicleDefects.unshift(d);
- if(priority==='Critical'){v.maintenanceHold=true;v.maintenancePreviousStatus={status:v.status||'',availability:v.availability||'',hireStatus:v.hireStatus||''};v.maintenanceHoldReason=d.description;v.status='Unavailable';v.availability='Unavailable';v.hireStatus='Unavailable';}
- persist();if(typeof addNotification==='function')addNotification(priority==='Critical'?'danger':'warning','Vehicle defect reported',`${v.name||'Vehicle'}: ${d.description}${priority==='Critical'?' Vehicle automatically marked OUT OF SERVICE.':''}`,'vehicle-defect-'+d.id,{phone:true});
- renderVehicleMaintenance();if(typeof renderDash==='function')renderDash();if(typeof renderHireVehicles==='function')renderHireVehicles();
-};
-window.updateVehicleDefect=function(id,status){
- const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status==='Closed')return;
- d.status=status;d.updatedAt=new Date().toISOString();if(status==='In Progress'&&typeof addNotification==='function')addNotification('info','Vehicle repair started',`Defect #${d.id} is now in progress.`,'vehicle-defect-progress-'+d.id);
- persist();renderVehicleMaintenance();
-};
-window.completeVehicleDefect=function(id){
- const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status!=='In Progress')return;
- const notes=prompt('Enter the repair work completed, parts replaced and any test results:');if(notes===null||!notes.trim())return;
- d.repairNotes=notes.trim();d.status='Awaiting Check';d.repairCompletedAt=new Date().toISOString();d.repairedBy=(me()||{}).name||'Crew';persist();
- if(typeof addNotification==='function')addNotification('warning','Vehicle awaiting repair sign-off',`Defect #${d.id} on ${(maintenanceVehicle(d.vehicleId)||{}).name||'vehicle'} is awaiting an authorised check.`,'vehicle-defect-check-'+d.id,{phone:true});
- renderVehicleMaintenance();
-};
-window.signOffVehicleDefect=function(id){
- if(!maintenanceCanSignOff()){alert('Only a director or authorised manager can sign off a vehicle repair.');return;}
- const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status!=='Awaiting Check')return;
- const check=prompt('Record the inspection / road test and why the vehicle is safe to return to service:');if(check===null||!check.trim())return;
- d.checkNotes=check.trim();d.status='Closed';d.checkedBy=(me()||{}).name||'Authorised manager';d.closedAt=new Date().toISOString();
- const v=maintenanceVehicle(d.vehicleId);
- if(v&&v.maintenanceHold){const other=s.vehicleDefects.some(x=>String(x.vehicleId)===String(v.id)&&String(x.id)!==String(d.id)&&x.priority==='Critical'&&x.status!=='Closed');if(!other){v.maintenanceHold=false;v.maintenanceHoldReason='';const prev=v.maintenancePreviousStatus||{};v.status=prev.status||'Available';v.availability=prev.availability||'Available';v.hireStatus=prev.hireStatus||'Available';delete v.maintenancePreviousStatus;}}
- persist();if(typeof addNotification==='function')addNotification('success','Vehicle defect signed off',`${v?.name||'Vehicle'} defect #${d.id} has been checked and closed.`,'vehicle-defect-closed-'+d.id,{phone:true});
- renderVehicleMaintenance();if(typeof renderDash==='function')renderDash();if(typeof renderHireVehicles==='function')renderHireVehicles();
-};
+
+(function(){
+ 'use strict';
+ const esc=(v)=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const arr=(v)=>Array.isArray(v)?v:[];
+ const today=()=>new Date().toISOString().slice(0,10);
+ const id=()=>('vm_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
+ function store(){
+   if(typeof data!=='object'||!data)throw new Error('Backstage data is not ready yet. Refresh the app and try again.');
+   data.vehicleMaintenance=arr(data.vehicleMaintenance);
+   data.vehicleDefects=arr(data.vehicleDefects);
+   data.vans=arr(data.vans);
+   return data;
+ }
+ function vehicleName(v){return [v.name||'Unnamed vehicle',v.registration||v.asset||''].filter(Boolean).join(' · ')}
+ function saveData(){
+   if(typeof save==='function')save();
+   else localStorage.setItem('avtracker_v1',JSON.stringify(data));
+ }
+ function userName(){
+   try{const u=typeof currentUser==='function'?currentUser():null;return u?.name||u?.displayName||'Crew member'}catch(_){return 'Crew member'}
+ }
+ function render(){
+   const host=document.getElementById('vehicleMaintenance');if(!host)return;
+   try{
+     const s=store(),vehicles=s.vans.slice().sort((a,b)=>vehicleName(a).localeCompare(vehicleName(b)));
+     if(!window._vmSelectedId||!vehicles.some(v=>String(v.id)===String(window._vmSelectedId)))window._vmSelectedId=vehicles[0]?.id||'';
+     const selected=vehicles.find(v=>String(v.id)===String(window._vmSelectedId));
+     const services=s.vehicleMaintenance.filter(r=>String(r.vehicleId)===String(window._vmSelectedId)).sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+     const defects=s.vehicleDefects.filter(r=>String(r.vehicleId)===String(window._vmSelectedId)).sort((a,b)=>String(b.reportedAt||'').localeCompare(String(a.reportedAt||'')));
+     const open=defects.filter(d=>d.status!=='Closed');
+     const critical=open.filter(d=>d.priority==='Critical').length;
+     host.innerHTML=`
+      <style>
+       #vehicleMaintenance .vm-card{background:#102219;border:1px solid #294737;border-radius:15px;padding:15px;margin:12px 0}
+       #vehicleMaintenance .vm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+       #vehicleMaintenance .vm-grid label{display:block;min-width:0}
+       #vehicleMaintenance label{font-size:14px;color:#c7d7cc}
+       #vehicleMaintenance input,#vehicleMaintenance select,#vehicleMaintenance textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;background:#08130e;color:#f1f6f2;border:1px solid #355343;border-radius:9px;padding:11px;font:inherit}
+       #vehicleMaintenance textarea{min-height:85px;resize:vertical}
+       #vehicleMaintenance .vm-record{background:#0b1911;border:1px solid #294737;border-radius:11px;padding:12px;margin:9px 0}
+       #vehicleMaintenance .vm-muted{color:#aebfb4;font-size:13px}
+       #vehicleMaintenance .vm-tag{display:inline-block;border-radius:20px;padding:4px 9px;background:#1b3d2c;color:#c7f0d5;font-size:12px;font-weight:700}
+       #vehicleMaintenance .vm-tag.red{background:#572626;color:#ffd0d0}
+       #vehicleMaintenance .vm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+       #vehicleMaintenance button{margin-top:8px}
+       @media(max-width:560px){#vehicleMaintenance .vm-grid{grid-template-columns:1fr}}
+      </style>
+      <div class="card vm-card">
+       <h2 style="margin:0 0 8px">🔧 Vehicle Maintenance</h2>
+       <p class="vm-muted">A simple service log and fault tracker for each fleet vehicle.</p>
+       <label>Select vehicle
+        <select id="vmVehicleSelect" onchange="window.vmSelectVehicle(this.value)">
+         ${vehicles.map(v=>`<option value="${esc(v.id)}" ${String(v.id)===String(window._vmSelectedId)?'selected':''}>${esc(vehicleName(v))}</option>`).join('')}
+        </select>
+       </label>
+       ${selected?`<p style="margin:12px 0 0"><b>${esc(vehicleName(selected))}</b> ${critical?'<span class="vm-tag red">OUT OF SERVICE · CRITICAL DEFECT</span>':'<span class="vm-tag">FLEET RECORD</span>'}</p>`:'<p>No vehicles found. Add vehicles under Equipment & Vehicles first.</p>'}
+      </div>
+      ${selected?`
+       <div class="vm-grid">
+        <div class="vm-card"><b style="font-size:25px">${services.length}</b><div class="vm-muted">Service records</div></div>
+        <div class="vm-card"><b style="font-size:25px">${open.length}</b><div class="vm-muted">Open problems</div></div>
+       </div>
+       ${critical?'<div class="vm-card" style="border-color:#a33;background:#321b1b"><b style="color:#ffc4c4">⚠ Critical defect recorded. Do not use this vehicle until checked and cleared.</b></div>':''}
+       <div class="vm-card">
+        <h3 style="margin-top:0">＋ Add service / work record</h3>
+        <form onsubmit="window.vmAddService(event)">
+         <div class="vm-grid">
+          <label>Work type<select name="type"><option>Routine service</option><option>Repair</option><option>Tyres</option><option>Brakes</option><option>Inspection</option><option>Other</option></select></label>
+          <label>Status<select name="status"><option value="Planned">To be done</option><option value="Completed">Completed</option></select></label>
+          <label>Date<input type="date" name="date" value="${today()}" required></label>
+          <label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label>
+          <label>Garage / mechanic<input name="provider" placeholder="Optional"></label>
+          <label>Cost (£)<input type="number" min="0" step="0.01" name="cost" placeholder="Optional"></label>
+         </div>
+         <label style="display:block;margin-top:10px">Work details<textarea name="description" required placeholder="What needs doing, or what work was completed?"></textarea></label>
+         <button type="submit">Save service record</button>
+        </form>
+       </div>
+       <div class="vm-card">
+        <h3 style="margin-top:0">⚠ Report a problem</h3>
+        <form onsubmit="window.vmAddDefect(event)">
+         <div class="vm-grid">
+          <label>Priority<select name="priority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+          <label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label>
+         </div>
+         <label style="display:block;margin-top:10px">Problem<textarea name="description" required placeholder="Describe the fault or damage"></textarea></label>
+         <button type="submit" class="danger">Submit problem</button>
+        </form>
+       </div>
+       <div class="vm-card">
+        <h3 style="margin-top:0">Service history</h3>
+        ${services.length?services.map(r=>`<div class="vm-record"><div><b>${esc(r.type)} · ${esc(r.date)}</b> <span class="vm-tag">${esc(r.status)}</span></div><p>${esc(r.description)}</p><div class="vm-muted">${r.mileage?'Mileage: '+esc(r.mileage)+' · ':''}${r.provider?'Garage: '+esc(r.provider)+' · ':''}${r.cost?'Cost: £'+Number(r.cost).toFixed(2):''}</div></div>`).join(''):'<p class="vm-muted">No service records have been added for this vehicle.</p>'}
+       </div>
+       <div class="vm-card">
+        <h3 style="margin-top:0">Reported problems</h3>
+        ${defects.length?defects.map(d=>`<div class="vm-record"><div><b>${esc(d.priority)} priority</b> <span class="vm-tag ${d.priority==='Critical'?'red':''}">${esc(d.status)}</span></div><div class="vm-muted">${esc(new Date(d.reportedAt).toLocaleString('en-GB'))} · ${esc(d.reportedBy)}</div><p>${esc(d.description)}</p>${d.status!=='Closed'?`<div class="vm-actions">${d.status==='Open'?`<button class="secondary" onclick="window.vmSetDefect('${esc(d.id)}','In Progress')">Start repair</button>`:''}${d.status==='In Progress'?`<button class="secondary" onclick="window.vmSetDefect('${esc(d.id)}','Awaiting Check')">Repair completed</button>`:''}${d.status==='Awaiting Check'?`<button onclick="window.vmSetDefect('${esc(d.id)}','Closed')">Check & close</button>`:''}</div>`:''}</div>`).join(''):'<p class="vm-muted">No problems reported for this vehicle.</p>'}
+       </div>
+      `:''}`;
+   }catch(err){
+     console.error('Simple Vehicle Maintenance render failed',err);
+     host.innerHTML=`<div class="card"><h2>Vehicle Maintenance</h2><p>${esc(err.message||err)}</p><button onclick="window.renderVehicleMaintenance()">Try again</button></div>`;
+   }
+ }
+ window.renderVehicleMaintenance=render;
+ window.vmSelectVehicle=function(id){window._vmSelectedId=id;render()};
+ window.vmAddService=function(e){
+   e.preventDefault();const s=store(),v=s.vans.find(x=>String(x.id)===String(window._vmSelectedId));if(!v)return;
+   const f=e.target,fd=new FormData(f);
+   s.vehicleMaintenance.unshift({id:id(),vehicleId:v.id,type:String(fd.get('type')||'Other'),status:String(fd.get('status')||'Planned'),date:String(fd.get('date')||today()),mileage:String(fd.get('mileage')||''),provider:String(fd.get('provider')||''),cost:Number(fd.get('cost')||0),description:String(fd.get('description')||''),createdAt:new Date().toISOString(),createdBy:userName()});
+   saveData();render();
+ };
+ window.vmAddDefect=function(e){
+   e.preventDefault();const s=store(),v=s.vans.find(x=>String(x.id)===String(window._vmSelectedId));if(!v)return;
+   const fd=new FormData(e.target),priority=String(fd.get('priority')||'Medium');
+   const d={id:id(),vehicleId:v.id,priority,status:'Open',mileage:String(fd.get('mileage')||''),description:String(fd.get('description')||''),reportedAt:new Date().toISOString(),reportedBy:userName()};
+   s.vehicleDefects.unshift(d);
+   if(priority==='Critical')v.maintenanceHold=true;
+   saveData();
+   try{if(typeof addNotification==='function')addNotification(priority==='Critical'?'warning':'info','Vehicle problem reported',vehicleName(v)+': '+d.description,'vehicle-defect-'+d.id)}catch(_){}
+   render();
+ };
+ window.vmSetDefect=function(defectId,status){
+   const s=store(),d=s.vehicleDefects.find(x=>String(x.id)===String(defectId));if(!d)return;
+   d.status=status;d.updatedAt=new Date().toISOString();d.updatedBy=userName();
+   const v=s.vans.find(x=>String(x.id)===String(d.vehicleId));
+   if(v){const stillCritical=s.vehicleDefects.some(x=>String(x.vehicleId)===String(v.id)&&x.priority==='Critical'&&x.status!=='Closed');v.maintenanceHold=stillCritical}
+   saveData();render();
+ };
+})();
+
 
 function showPage(page){
  if(!requireLogin())return;
