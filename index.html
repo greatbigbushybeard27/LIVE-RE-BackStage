@@ -1116,8 +1116,18 @@ function currentPayPeriod(){return payPeriodFor(dateKeyLocal(new Date()))}
 function minutesForHourEntry(x){if(x.minutes!=null)return Math.max(0,Number(x.minutes)||0);if(!x.start||!x.finish)return 0;const [sh,sm]=x.start.split(':').map(Number),[fh,fm]=x.finish.split(':').map(Number);let a=sh*60+sm,b=fh*60+fm;if(b<=a)b+=1440;return Math.max(0,b-a)}
 function formatHours(mins){const m=Math.max(0,Math.round(Number(mins)||0));return `${Math.floor(m/60)}h ${pad2(m%60)}m`}
 function weekBounds(dateStr){const d=new Date(`${dateStr}T12:00:00`);const day=d.getDay()||7;const monday=new Date(d);monday.setDate(d.getDate()-(day-1));const sunday=new Date(monday);sunday.setDate(monday.getDate()+6);return {start:dateKeyLocal(monday),end:dateKeyLocal(sunday)}}
-function hourJobOptions(selected,dateStr){const d=dateStr||dateKeyLocal(new Date()),w=weekBounds(d);const jobs=[...(data.events||[])].filter(j=>j.status!=='Closed'&&(((j.startDate||j.date||'')>=w.start&&(j.startDate||j.date||'')<=w.end)||((j.endDate||'')>=w.start&&(j.endDate||'')<=w.end))).map(j=>({id:j.id,label:`🎪 ${j.name}`}));return jobs.map(j=>`<option value="JOB:${esc(j.id)}" ${selected===`JOB:${j.id}`?'selected':''}>${esc(j.label)}</option>`).join('')}
-function hourWorkLabel(x){if(x.jobId){const j=(data.events||[]).find(e=>e.id===x.jobId);if(j)return j.name}return x.work||'Other work'}
+function hourJobOptions(selected,dateStr){
+ const events=(data.events||[]).map(j=>({value:`JOB:${j.id}`,label:`🎪 Event • ${j.name}${['Complete','Closed'].includes(j.status)?' (Completed)':''}`}));
+ const portaloos=(data.portalooJobs||[]).map(j=>({value:`PORTALOO:${j.id}`,label:`🚻 Portaloo • ${j.name||j.customerName||j.site||'Portaloo job'}${['Complete','Closed','Collected'].includes(j.status)?' (Completed)':''}`}));
+ const tasks=(data.tasks||[]).map(t=>({value:`TASK:${t.id}`,label:`🔧 Task • ${t.title||t.name||'Untitled task'}${t.status==='Complete'?' (Completed)':''}`}));
+ return [...events,...portaloos,...tasks].map(j=>`<option value="${esc(j.value)}" ${selected===j.value?'selected':''}>${esc(j.label)}</option>`).join('');
+}
+function hourWorkLabel(x){
+ if(x.jobId){const j=(data.events||[]).find(e=>e.id===x.jobId);if(j)return j.name}
+ if(x.portalooJobId){const j=(data.portalooJobs||[]).find(e=>e.id===x.portalooJobId);if(j)return j.name||j.customerName||j.site||'Portaloo job'}
+ if(x.taskId){const t=(data.tasks||[]).find(e=>e.id===x.taskId);if(t)return t.title||t.name||'Task'}
+ return x.work||'Other work'
+}
 function wageRateFor(u,type){const w=ensureWageSettings(u)||{};return type==='enhanced1'?Number(w.enhanced1Rate)||Number(w.standardRate)||0:type==='enhanced2'?Number(w.enhanced2Rate)||Number(w.standardRate)||0:Number(w.standardRate)||0}
 function hourRateTypeLabel(t){return t==='enhanced1'?'Enhanced Rate 1':t==='enhanced2'?'Enhanced Rate 2':'Standard Rate'}
 function hourRateForEntry(x){if(x.rateSnapshot!=null)return Number(x.rateSnapshot)||0;const u=(data.users||[]).find(y=>y.id===x.userId);return wageRateFor(u,x.rateType||'standard')}
@@ -1142,9 +1152,69 @@ function openCrewProfile(){const u=currentUser();if(!u)return showLoginOverlay()
 function openWageSetup(){const u=currentUser();if(!u)return showLoginOverlay();const w=ensureWageSettings(u);returnToProfileOnClose=true;openModal(`<h2>⚙️ Wage Setup</h2><p class="muted">Set the three hourly rates and the tax percentage used for the 27th → 26th pay period.</p><label>Standard Rate (£/hour)</label><input id="w_standard" type="number" min="0" step="0.01" value="${w.standardRate.toFixed(2)}"><label>Enhanced Rate 1 (£/hour)</label><input id="w_enh1" type="number" min="0" step="0.01" value="${w.enhanced1Rate.toFixed(2)}"><label>Enhanced Rate 2 (£/hour)</label><input id="w_enh2" type="number" min="0" step="0.01" value="${w.enhanced2Rate.toFixed(2)}"><label>Tax deduction (%)</label><input id="w_tax" type="number" min="0" max="100" step="0.01" value="${w.taxPercent.toFixed(2)}"><p class="small muted">Tax is calculated as a percentage of gross pay for the current pay period.</p><button onclick="saveWageSetup()">Save Wage Setup</button>`)}
 
 function saveWageSetup(){const u=currentUser();if(!u)return;const std=Math.max(0,Number(v('w_standard'))||0),e1=Math.max(0,Number(v('w_enh1'))||0),e2=Math.max(0,Number(v('w_enh2'))||0),tax=Math.max(0,Math.min(100,Number(v('w_tax'))||0));if(!std||!e1||!e2)return alert('Enter all three hourly rates.');u.wageSettings={standardRate:std,enhanced1Rate:e1,enhanced2Rate:e2,taxPercent:tax};save();returnToProfileOnClose=false;closeModal();openCrewProfile()}
-function toggleHourEntryMode(){const day=v('h_job')==='OTHER:dayoff';const rate=document.getElementById('h_rate_wrap'),times=document.getElementById('h_time_wrap'),note=document.getElementById('h_dayoff_note');if(rate)rate.style.display=day?'none':'';if(times)times.style.display=day?'none':'';if(note)note.style.display=day?'block':'none'}
-function addHourEntry(existingId){const u=currentUser();if(!u)return showLoginOverlay();const x=existingId?(data.hours||[]).find(h=>h.id===existingId):null;if(x&&x.userId!==u.id)return;if(x&&x.status==='Submitted')return alert('This hour entry is already submitted and cannot be amended.');const date=x?.date||dateKeyLocal(new Date());const rt=x?.rateType||'standard';returnToProfileOnClose=true;openModal(`<h2>${x?'Edit':'Add'} Hours</h2><label>Date</label><input id="h_date" type="date" value="${esc(date)}"><label>Work / Job</label><select id="h_job" onchange="toggleHourEntryMode()"><option value="">Select a job…</option>${hourJobOptions(x?.jobId?`JOB:${x.jobId}`:'',date)}<option value="OTHER:warehouse" ${x?.work==='Warehouse'?'selected':''}>Warehouse</option><option value="OTHER:portaloo" ${x?.work==='Portaloo Service'?'selected':''}>Portaloo Service</option><option value="OTHER:sick" ${x?.work==='Sick Day'?'selected':''}>Sick Day</option><option value="OTHER:dayoff" ${x?.work==='Day Off'?'selected':''}>Day Off</option></select><input id="h_work" placeholder="Describe other work" value="${esc(x?.work||'')}" style="margin-top:7px;display:none"><div id="h_rate_wrap"><label>Pay Rate</label><select id="h_rate"><option value="standard" ${rt==='standard'?'selected':''}>Standard Rate • ${money(wageRateFor(u,'standard'))}/hr</option><option value="enhanced1" ${rt==='enhanced1'?'selected':''}>Enhanced Rate 1 • ${money(wageRateFor(u,'enhanced1'))}/hr</option><option value="enhanced2" ${rt==='enhanced2'?'selected':''}>Enhanced Rate 2 • ${money(wageRateFor(u,'enhanced2'))}/hr</option></select></div><div id="h_time_wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><label>Start</label><input id="h_start" type="time" value="${esc(x?.start||'08:00')}"></div><div><label>Finish</label><input id="h_finish" type="time" value="${esc(x?.finish||'17:00')}"></div></div><div id="h_dayoff_note" class="holiday-counter" style="display:none">🏖️ Day Off uses 1 day from your Holiday Allowance. You have <b>${holidayRemaining(u)+(x?.work==='Day Off'?1:0)}</b> day${(holidayRemaining(u)+(x?.work==='Day Off'?1:0))===1?'':'s'} remaining.</div><p class="small muted">Hours are recorded only. Breaks are paid. No location tracking.</p><button onclick="saveHourEntry('${x?.id||''}')">Save hours</button>`);toggleHourEntryMode()}
-function saveHourEntry(id){const u=currentUser();if(!u)return;const date=v('h_date'),sel=v('h_job');if(!date||!sel)return alert('Select a date and job/work type.');const existing=id?data.hours.find(h=>h.id===id):null;const isDayOff=sel==='OTHER:dayoff';let start='',finish='',minutes=0,rateType='standard',jobId='',work='';if(isDayOff){if(existing?.work!=='Day Off'&&holidayRemaining(u)<=0)return alert('You have no Holiday Allowance days remaining. Ask an admin to add more.');work='Day Off';}else{start=v('h_start');finish=v('h_finish');if(!start||!finish)return alert('Enter start and finish times.');minutes=minutesForHourEntry({start,finish});if(minutes<=0)return alert('Finish time must be after start time.');rateType=v('h_rate')||'standard';if(sel.startsWith('JOB:'))jobId=sel.slice(4);else work=({warehouse:'Warehouse',portaloo:'Portaloo Service',sick:'Sick Day'}[sel.slice(6)]||'Other work');}const x={id:id||makeId('hours'),userId:u.id,date,start,finish,minutes,jobId,work,rateType,rateSnapshot:wageRateFor(u,rateType),status:(existing?.status)||'Draft',createdAt:existing?.createdAt||new Date().toISOString()};if(id){const i=data.hours.findIndex(h=>h.id===id);if(i>=0)data.hours[i]=x}else data.hours.push(x);save();returnToProfileOnClose=false;closeModal();openHoursTracker()}
+function toggleHourEntryMode(){
+ const choice=v('h_job'),day=choice==='OTHER:dayoff',manual=choice==='OTHER:manual';
+ const rate=document.getElementById('h_rate_wrap'),times=document.getElementById('h_time_wrap'),note=document.getElementById('h_dayoff_note'),work=document.getElementById('h_work');
+ if(rate)rate.style.display=day?'none':'';
+ if(times)times.style.display=day?'none':'grid';
+ if(note)note.style.display=day?'block':'none';
+ if(work)work.style.display=manual?'block':'none';
+}
+function addHourEntry(existingId, presetDate){
+ const u=currentUser();if(!u)return showLoginOverlay();
+ const x=existingId?(data.hours||[]).find(h=>h.id===existingId):null;
+ if(x&&x.userId!==u.id)return;
+ if(x&&x.status==='Submitted')return alert('This hour entry is already submitted and cannot be amended.');
+ const date=x?.date||presetDate||dateKeyLocal(new Date());
+ const selected=x?.jobId?`JOB:${x.jobId}`:x?.portalooJobId?`PORTALOO:${x.portalooJobId}`:x?.taskId?`TASK:${x.taskId}`:'';
+ const rt=x?.rateType||'standard';
+ returnToProfileOnClose=true;
+ openModal(`<h2>${x?'Edit':'Add'} Hours</h2>
+ <label>Date</label><input id="h_date" type="date" value="${esc(date)}">
+ <label>Work / Job</label>
+ <select id="h_job" onchange="toggleHourEntryMode()">
+ <option value="">Select a job or task…</option>${hourJobOptions(selected,date)}
+ <option value="OTHER:warehouse" ${x?.work==='Warehouse'?'selected':''}>🏢 Warehouse</option>
+ <option value="OTHER:portaloo" ${x?.work==='Portaloo Service'?'selected':''}>🚻 General Portaloo work</option>
+ <option value="OTHER:sick" ${x?.work==='Sick Day'?'selected':''}>Sick Day</option>
+ <option value="OTHER:dayoff" ${x?.work==='Day Off'?'selected':''}>🏖️ Day Off</option>
+ <option value="OTHER:manual" ${x&&!x.jobId&&!x.portalooJobId&&!x.taskId&&!['Warehouse','Portaloo Service','Sick Day','Day Off'].includes(x.work)?'selected':''}>✏️ Other (enter manually)</option>
+ </select>
+ <input id="h_work" placeholder="Enter work or job description" value="${esc(x?.work||'')}" style="margin-top:7px;display:none">
+ <div id="h_rate_wrap"><label>Pay Rate</label><select id="h_rate">
+ <option value="standard" ${rt==='standard'?'selected':''}>Standard Rate • ${money(wageRateFor(u,'standard'))}/hr</option>
+ <option value="enhanced1" ${rt==='enhanced1'?'selected':''}>Enhanced Rate 1 • ${money(wageRateFor(u,'enhanced1'))}/hr</option>
+ <option value="enhanced2" ${rt==='enhanced2'?'selected':''}>Enhanced Rate 2 • ${money(wageRateFor(u,'enhanced2'))}/hr</option>
+ </select></div>
+ <div id="h_time_wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+ <div><label>Start</label><input id="h_start" type="time" value="${esc(x?.start||'08:00')}"></div>
+ <div><label>Finish</label><input id="h_finish" type="time" value="${esc(x?.finish||'17:00')}"></div></div>
+ <div id="h_dayoff_note" class="holiday-counter" style="display:none">🏖️ Day Off uses 1 day from your Holiday Allowance. You have <b>${holidayRemaining(u)+(x?.work==='Day Off'?1:0)}</b> day${(holidayRemaining(u)+(x?.work==='Day Off'?1:0))===1?'':'s'} remaining.</div>
+ <p class="small muted">Add each job or task as a separate entry. You can record several entries against the same date. Breaks are paid. No location tracking.</p>
+ <div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="saveHourEntry('${x?.id||''}')">Save hours</button></div>`);
+ toggleHourEntryMode();
+}
+function saveHourEntry(id){
+ const u=currentUser();if(!u)return;
+ const date=v('h_date'),sel=v('h_job');if(!date||!sel)return alert('Select a date and job/work type.');
+ const existing=id?data.hours.find(h=>h.id===id):null;
+ const isDayOff=sel==='OTHER:dayoff';
+ let start='',finish='',minutes=0,rateType='standard',jobId='',portalooJobId='',taskId='',work='';
+ if(isDayOff){if(existing?.work!=='Day Off'&&holidayRemaining(u)<=0)return alert('You have no Holiday Allowance days remaining. Ask an admin to add more.');work='Day Off';}
+ else{
+  start=v('h_start');finish=v('h_finish');if(!start||!finish)return alert('Enter start and finish times.');
+  minutes=minutesForHourEntry({start,finish});if(minutes<=0)return alert('Finish time must be after start time.');
+  rateType=v('h_rate')||'standard';
+  if(sel.startsWith('JOB:'))jobId=sel.slice(4);
+  else if(sel.startsWith('PORTALOO:'))portalooJobId=sel.slice(9);
+  else if(sel.startsWith('TASK:'))taskId=sel.slice(5);
+  else if(sel==='OTHER:manual'){work=(v('h_work')||'').trim();if(!work)return alert('Enter a description for Other work.');}
+  else work=({warehouse:'Warehouse',portaloo:'Portaloo Service',sick:'Sick Day'}[sel.slice(6)]||'Other work');
+ }
+ const row={id:id||makeId('hours'),userId:u.id,date,start,finish,minutes,jobId,portalooJobId,taskId,work,rateType,rateSnapshot:wageRateFor(u,rateType),status:existing?.status||'Draft',createdAt:existing?.createdAt||new Date().toISOString()};
+ if(id){const i=data.hours.findIndex(h=>h.id===id);if(i>=0)data.hours[i]=row}else data.hours.push(row);
+ save();returnToProfileOnClose=false;closeModal();openHoursTracker();
+}
 function periodFromKey(key){const [start,end]=String(key||'').split('_');return start&&end?{start,end,key}:null}
 function previousSubmittedPeriods(u,currentKey){const map=new Map();(data.hours||[]).filter(x=>x.userId===u.id&&x.status==='Submitted').forEach(x=>{const p=payPeriodFor(x.date);if(p.key===currentKey)return;map.set(p.key,p)});return [...map.values()].sort((a,b)=>b.start.localeCompare(a.start))}
 function openTimesheetPeriod(key){const u=currentUser();if(!u)return;const p=periodFromKey(key);if(!p)return;returnToProfileOnClose=false;closeModal();showPage('hours');renderHoursPage(u,p,true)}
@@ -1176,45 +1246,71 @@ function hoursMoney(value,u){return hoursMoneyHidden(u)?'<span class="hours-mone
 function hoursPeriodTotals(u,start,end){
  const rows=(data.hours||[]).filter(x=>x.userId===u.id&&x.date>=start&&x.date<=end);
  const overtime=rows.filter(x=>x.rateType==='enhanced1'||x.rateType==='enhanced2');
- return {rows,minutes:rows.reduce((a,x)=>a+minutesForHourEntry(x),0),
- gross:rows.reduce((a,x)=>a+wageForEntry(x),0),
- overtimeMinutes:overtime.reduce((a,x)=>a+minutesForHourEntry(x),0),
- overtimeGross:overtime.reduce((a,x)=>a+wageForEntry(x),0)};
+ return {rows,minutes:rows.reduce((a,x)=>a+minutesForHourEntry(x),0),gross:rows.reduce((a,x)=>a+wageForEntry(x),0),overtimeMinutes:overtime.reduce((a,x)=>a+minutesForHourEntry(x),0),overtimeGross:overtime.reduce((a,x)=>a+wageForEntry(x),0)};
 }
-function hoursCalendarBounds(which){
- const now=new Date(),year=now.getFullYear(),month=now.getMonth();
- if(which==='month')return {start:dateKeyLocal(new Date(year,month,1,12)),end:dateKeyLocal(new Date(year,month+1,0,12))};
- return {start:`${year}-01-01`,end:`${year}-12-31`};
+function hoursHistoryPeriods(u){
+ const map=new Map();(data.hours||[]).filter(x=>x.userId===u.id).forEach(x=>{const p=payPeriodFor(x.date);map.set(p.key,p)});
+ return [...map.values()].sort((a,b)=>b.start.localeCompare(a.start));
 }
 function hoursDashboardHtml(u){
- const hidden=hoursMoneyHidden(u),month=hoursCalendarBounds('month'),year=hoursCalendarBounds('year');
- const m=hoursPeriodTotals(u,month.start,month.end),y=hoursPeriodTotals(u,year.start,year.end);
- const periods=new Map();
- (data.hours||[]).filter(x=>x.userId===u.id).forEach(x=>{const p=payPeriodFor(x.date);if(p.key!==currentPayPeriod().key)periods.set(p.key,p)});
- const previous=[...periods.values()].sort((a,b)=>b.start.localeCompare(a.start));
- const toggle=`<button class="secondary hours-privacy-toggle" onclick="setHoursMoneyPrivacy(${hidden?'false':'true'})">${hidden?'👁️ Show money':'🔒 Hide money'}</button>`;
- const moneyValue=(n)=>hidden?'<span class="hours-money-blur">£••••••</span>':money(n);
+ const hidden=hoursMoneyHidden(u),p=currentPayPeriod(),period=hoursPeriodTotals(u,p.start,p.end),year=hoursPeriodTotals(u,`${new Date().getFullYear()}-01-01`,`${new Date().getFullYear()}-12-31`);
+ const moneyValue=n=>hidden?'<span class="hours-money-blur">£••••••</span>':money(n);
  return `<section class="hours-dashboard">
- <div class="section-head"><div><h3 style="margin:0">Your totals</h3><div class="small muted">Calendar month and year • overtime included in earnings</div></div>${toggle}</div>
+ <div class="section-head"><div><h3 style="margin:0">Pay summary</h3><div class="small muted">Current pay period • 27th to 26th</div></div><button class="secondary hours-privacy-toggle" onclick="setHoursMoneyPrivacy(${hidden?'false':'true'})">${hidden?'👁️ Show money':'🔒 Hide money'}</button></div>
+ <div class="hours-period-banner"><div class="small">CURRENT PAY PERIOD</div><b>${p.start.slice(8,10)} ${new Date(p.start+'T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'})} – ${p.end.slice(8,10)} ${new Date(p.end+'T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'})}</b></div>
  <div class="hours-counter-grid">
-  <div class="profile-stat"><span>Monthly earnings</span><b>${moneyValue(m.gross)}</b></div>
-  <div class="profile-stat"><span>Yearly earnings</span><b>${moneyValue(y.gross)}</b></div>
-  <div class="profile-stat"><span>Monthly hours</span><b>${formatHours(m.minutes)}</b></div>
-  <div class="profile-stat"><span>Yearly hours</span><b>${formatHours(y.minutes)}</b></div>
- </div>
- <div class="hours-overtime-panel"><h3>⏱️ Overtime breakdown</h3><div class="hours-counter-grid">
-  <div class="profile-stat"><span>Monthly overtime hours</span><b>${formatHours(m.overtimeMinutes)}</b></div>
-  <div class="profile-stat"><span>Yearly overtime hours</span><b>${formatHours(y.overtimeMinutes)}</b></div>
-  <div class="profile-stat"><span>Monthly overtime pay</span><b>${moneyValue(m.overtimeGross)}</b></div>
-  <div class="profile-stat"><span>Yearly overtime pay</span><b>${moneyValue(y.overtimeGross)}</b></div>
- </div></div>
- ${previous.length?`<div class="profile-section"><h3>Previous pay periods</h3><div class="small muted">Select a period to view its submitted or saved shifts and pay breakdown.</div>${previous.map(p=>{const s=paySummary(u,p);return `<div class="admin-hours-row"><div><b>${p.start.slice(8,10)}/${p.start.slice(5,7)}/${p.start.slice(0,4)} → ${p.end.slice(8,10)}/${p.end.slice(5,7)}/${p.end.slice(0,4)}</b><div class="small">${formatHours(s.minutes)} • ${s.rows.length&&s.rows.every(x=>x.status==='Submitted')?'Submitted':'Saved'}</div></div><button class="secondary" onclick="openTimesheetPeriod('${p.key}')">View</button></div>`}).join('')}</div>`:''}
- </section>`;
+ <div class="profile-stat"><span>Period earnings</span><b>${moneyValue(period.gross)}</b></div><div class="profile-stat"><span>Yearly earnings</span><b>${moneyValue(year.gross)}</b></div>
+ <div class="profile-stat"><span>Period hours</span><b>${formatHours(period.minutes)}</b></div><div class="profile-stat"><span>Yearly hours</span><b>${formatHours(year.minutes)}</b></div>
+ <div class="profile-stat"><span>Overtime (period)</span><b>${formatHours(period.overtimeMinutes)} <small>${moneyValue(period.overtimeGross)}</small></b></div>
+ <div class="profile-stat"><span>Overtime (year)</span><b>${formatHours(year.overtimeMinutes)} <small>${moneyValue(year.overtimeGross)}</small></b></div>
+ </div></section>`;
 }
-
-function timesheetHtml(u,p,isPrevious=false){const rows=(data.hours||[]).filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));const sum=paySummary(u,p),submitted=rows.length&&rows.every(x=>x.status==='Submitted'),days={};rows.forEach(x=>(days[x.date]||(days[x.date]=[])).push(x));const dayBlocks=Object.entries(days).map(([date,rs])=>{const entries=rs.map(x=>{const edit=x.status!=='Submitted'?`<button class="secondary timesheet-edit" onclick="addHourEntry('${x.id}')">Edit</button>`:'';const main=x.work==='Day Off'?'<b>🏖️ Day Off</b>':`<b>${esc(x.start)} <span class="time-arrow">→</span> ${esc(x.finish)}</b>`;const sub=x.work==='Day Off'?esc(hourWorkLabel(x)):`${esc(hourWorkLabel(x))} • ${esc(hourRateTypeLabel(x.rateType||'standard'))} • ${hoursMoney(hourRateForEntry(x),u)}/hr`;const amount=x.work==='Day Off'?'':`<div>${formatHours(minutesForHourEntry(x))}</div><div class="small">${hoursMoney(wageForEntry(x),u)}</div>`;return `<div class="timesheet-entry"><div class="timesheet-entry-main">${main}<div class="small">${sub}</div></div><div class="timesheet-entry-hours">${amount}</div>${edit}</div>`;}).join('');return `<div class="timesheet-day"><div class="timesheet-day-head"><div><b>${new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'long',year:'numeric'})}</b></div></div>${entries}</div>`}).join('');const submitBlock=!isPrevious&&rows.length&&!submitted?`<div class="timesheet-submit"><button class="green" style="width:100%" onclick="submitHoursPeriod()">Submit Pay Period</button><div class="small muted">Once submitted, you will not be able to amend these hours.</div></div>`:'';const prev=previousSubmittedPeriods(u,p.key);const previousBlock=!isPrevious&&prev.length?`<div class="profile-section"><h3>Previous Submitted Timesheets</h3>${prev.map(q=>`<div class="admin-hours-row"><div><b>${q.start.slice(8,10)}/${q.start.slice(5,7)}/${q.start.slice(0,4)} → ${q.end.slice(8,10)}/${q.end.slice(5,7)}/${q.end.slice(0,4)}</b><div class="small">Submitted • ${formatHours(paySummary(u,q).minutes)}</div></div><button class="secondary" onclick="openTimesheetPeriod('${q.key}')">View</button></div>`).join('')}</div>`:'';const hidden=hoursMoneyHidden(u);return `<div class="timesheet-header"><div><h2 style="margin:0">⏱️ My Hours</h2><div class="muted">${p.start.slice(8,10)}/${p.start.slice(5,7)}/${p.start.slice(0,4)} → ${p.end.slice(8,10)}/${p.end.slice(5,7)}/${p.end.slice(0,4)}</div></div><span class="period-pill">${isPrevious?'SAVED':submitted?'SUBMITTED':'DRAFT'}</span></div><div class="timesheet-total-grid"><div class="profile-stat"><span>Total Hours</span><b>${formatHours(sum.minutes)}</b></div><div class="profile-stat"><span>Overtime</span><b>${formatHours(sum.overtimeMinutes||0)}</b></div><div class="profile-stat"><span>Gross</span><b>${hoursMoney(sum.gross,u)}</b></div><div class="profile-stat"><span>Net</span><b>${hidden?'<span class="hours-money-blur">£••••••</span>':money(sum.net)}</b></div></div>${!isPrevious?`<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button></div>`:`<div class="actions timesheet-top-actions"><button class="secondary" onclick="openHoursTracker()">← Current Pay Period</button></div>`}<div class="timesheet-list">${dayBlocks||'<div class="empty">No hours recorded for this pay period.</div>'}</div>${submitBlock}${previousBlock}`;}
-function renderHoursPage(u,p,isPrevious=false){const el=document.getElementById('hours');if(!el)return;el.innerHTML=`<div class="card">${hoursDashboardHtml(u)}${timesheetHtml(u,p,isPrevious)}<div class="actions" style="margin-top:16px"><button class="secondary" onclick="openCrewProfile()">← My Profile</button></div></div>`;}
-function openHoursTracker(){const u=currentUser();if(!u)return showLoginOverlay();returnToProfileOnClose=false;closeModal();showPage('hours');renderHoursPage(u,currentPayPeriod(),false)}
+function hoursHistoryHtml(u){
+ const periods=hoursHistoryPeriods(u),hidden=hoursMoneyHidden(u);
+ return `<section class="hours-history"><div class="section-head"><div><h3 style="margin:0">Pay History</h3><div class="small muted">Browse every pay period, newest first</div></div></div>
+ <div class="hours-history-tools"><input id="hoursHistorySearch" type="search" placeholder="Search pay periods…" oninput="filterHoursHistory()"><select id="hoursHistoryYear" onchange="filterHoursHistory()"><option value="">All years</option>${[...new Set(periods.map(p=>p.start.slice(0,4)))].sort().reverse().map(y=>`<option value="${y}">${y}</option>`).join('')}</select></div>
+ <div id="hoursHistoryList">${hoursHistoryRowsHtml(u,periods,hidden)}</div></section>`;
+}
+function hoursHistoryRowsHtml(u,periods,hidden){
+ if(!periods.length)return '<div class="empty">No previous pay periods recorded yet.</div>';
+ const moneyText=n=>hidden?'<span class="hours-money-blur">£••••••</span>':money(n);
+ return periods.map(p=>{const s=paySummary(u,p),isCurrent=p.key===currentPayPeriod().key,submitted=s.rows.length&&s.rows.every(x=>x.status==='Submitted'),status=isCurrent?'Current':submitted?'Submitted':'Saved';return `<button class="hours-history-row ${isCurrent?'current':''}" data-period="${p.key}" data-year="${p.start.slice(0,4)}" data-search="${(p.start+' '+p.end+' '+status).toLowerCase()}" onclick="openTimesheetPeriod('${p.key}')"><span class="hours-history-icon">▦</span><span class="hours-history-copy"><b>${p.start.slice(8,10)} ${new Date(p.start+'T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'})} – ${p.end.slice(8,10)} ${new Date(p.end+'T12:00:00').toLocaleDateString('en-GB',{month:'short',year:'numeric'})}</b><small>${formatHours(s.minutes)} · OT ${formatHours(s.overtimeMinutes)}</small></span><span class="hours-history-meta"><em class="${isCurrent?'current':submitted?'approved':'saved'}">${status}</em><b>${moneyText(s.gross)}</b></span><span>›</span></button>`}).join('');
+}
+function filterHoursHistory(){
+ const q=(document.getElementById('hoursHistorySearch')?.value||'').toLowerCase(),year=document.getElementById('hoursHistoryYear')?.value||'';
+ document.querySelectorAll('#hoursHistoryList .hours-history-row').forEach(row=>{row.style.display=(!q||row.dataset.search.includes(q))&&(!year||row.dataset.year===year)?'grid':'none'});
+}
+function hoursTimesheetHtml(u,p,isPrevious=false){
+ const rows=(data.hours||[]).filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end).slice().sort((a,b)=>(b.date+b.start).localeCompare(a.date+a.start));
+ const sum=paySummary(u,p),submitted=rows.length&&rows.every(x=>x.status==='Submitted'),days={};
+ rows.forEach(x=>(days[x.date]||(days[x.date]=[])).push(x));
+ const dayBlocks=Object.entries(days).sort((a,b)=>b[0].localeCompare(a[0])).map(([date,rs])=>{
+  const entries=rs.map(x=>{const edit=x.status!=='Submitted'?`<button class="secondary timesheet-edit" onclick="addHourEntry('${x.id}')">Edit</button>`:'';const main=x.work==='Day Off'?'<b>🏖️ Day Off</b>':`<b>${esc(x.start)} <span class="time-arrow">→</span> ${esc(x.finish)}</b>`;const sub=x.work==='Day Off'?esc(hourWorkLabel(x)):`${esc(hourWorkLabel(x))} • ${esc(hourRateTypeLabel(x.rateType||'standard'))} • ${hoursMoney(hourRateForEntry(x),u)}/hr`;const amount=x.work==='Day Off'?'':`<div>${formatHours(minutesForHourEntry(x))}</div><div class="small">${hoursMoney(wageForEntry(x),u)}</div>`;return `<div class="timesheet-entry"><div class="timesheet-entry-main">${main}<div class="small">${sub}</div></div><div class="timesheet-entry-hours">${amount}</div>${edit}</div>`}).join('');
+  return `<div class="timesheet-day"><div class="timesheet-day-head"><b>${new Date(date+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'long',year:'numeric'})}</b><button class="secondary" onclick="addHourEntry('', '${date}')">＋ Add job</button></div>${entries}</div>`;
+ }).join('');
+ const submitBlock=!isPrevious&&rows.length&&!submitted?`<div class="timesheet-submit"><button class="green" style="width:100%" onclick="submitHoursPeriod()">Submit Pay Period</button><div class="small muted">Once submitted, you will not be able to amend these hours.</div></div>`:'';
+ const addBlock=`<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button><button class="secondary" onclick="addHourEntry('', '${dateKeyLocal(new Date())}')">＋ Multi-entry</button></div>`;
+ const hidden=hoursMoneyHidden(u);
+ return `<div class="timesheet-header"><div><h2 style="margin:0">⏱️ ${isPrevious?'Pay Period Details':'My Timesheet'}</h2><div class="muted">${p.start.slice(8,10)}/${p.start.slice(5,7)}/${p.start.slice(0,4)} → ${p.end.slice(8,10)}/${p.end.slice(5,7)}/${p.end.slice(0,4)}</div></div><span class="period-pill">${isPrevious?(submitted?'SUBMITTED':'SAVED'):(submitted?'SUBMITTED':'DRAFT')}</span></div>
+ <div class="timesheet-total-grid"><div class="profile-stat"><span>Total Hours</span><b>${formatHours(sum.minutes)}</b></div><div class="profile-stat"><span>Overtime</span><b>${formatHours(sum.overtimeMinutes||0)}</b></div><div class="profile-stat"><span>Gross</span><b>${hoursMoney(sum.gross,u)}</b></div><div class="profile-stat"><span>Net</span><b>${hidden?'<span class="hours-money-blur">£••••••</span>':money(sum.net)}</b></div></div>
+ ${addBlock}<div class="timesheet-list">${dayBlocks||'<div class="empty">No hours recorded for this pay period.</div>'}</div>${submitBlock}`;
+}
+function setHoursTab(tab){
+ const u=currentUser();if(!u)return;
+ const p=window.backstageSelectedPayPeriod||currentPayPeriod();
+ window.backstageHoursTab=tab;
+ renderHoursPage(u,p,tab==='history'?false:(p.key!==currentPayPeriod().key));
+}
+function renderHoursPage(u,p,isPrevious=false){
+ const el=document.getElementById('hours');if(!el)return;
+ const tab=window.backstageHoursTab||'timesheet',current=currentPayPeriod();
+ if(!isPrevious&&p.key!==current.key)window.backstageSelectedPayPeriod=p;
+ if(tab==='history')el.innerHTML=`<div class="card">${hoursDashboardHtml(u)}<div class="hours-tabs"><button onclick="setHoursTab('timesheet')">▦ Timesheet</button><button class="active" onclick="setHoursTab('history')">▣ Pay History</button><button onclick="setHoursTab('summary')">▥ Summary</button></div>${hoursHistoryHtml(u)}<div class="actions"><button class="secondary" onclick="openCrewProfile()">← My Profile</button></div></div>`;
+ else if(tab==='summary')el.innerHTML=`<div class="card">${hoursDashboardHtml(u)}<div class="hours-tabs"><button onclick="setHoursTab('timesheet')">▦ Timesheet</button><button onclick="setHoursTab('history')">▣ Pay History</button><button class="active" onclick="setHoursTab('summary')">▥ Summary</button></div><h3>Yearly summary</h3><p class="muted">Year-to-date totals include all recorded normal and overtime entries.</p><div class="timesheet-total-grid"><div class="profile-stat"><span>Yearly hours</span><b>${formatHours(hoursPeriodTotals(u,`${new Date().getFullYear()}-01-01`,`${new Date().getFullYear()}-12-31`).minutes)}</b></div><div class="profile-stat"><span>Yearly earnings</span><b>${hoursMoney(hoursPeriodTotals(u,`${new Date().getFullYear()}-01-01`,`${new Date().getFullYear()}-12-31`).gross,u)}</b></div></div><div class="actions"><button class="secondary" onclick="openCrewProfile()">← My Profile</button></div></div>`;
+ else el.innerHTML=`<div class="card">${hoursDashboardHtml(u)}<div class="hours-tabs"><button class="active" onclick="setHoursTab('timesheet')">▦ Timesheet</button><button onclick="setHoursTab('history')">▣ Pay History</button><button onclick="setHoursTab('summary')">▥ Summary</button></div>${hoursTimesheetHtml(u,p,isPrevious)}<div class="actions" style="margin-top:16px"><button class="secondary" onclick="openCrewProfile()">← My Profile</button></div></div>`;
+}
+function openHoursTracker(){const u=currentUser();if(!u)return showLoginOverlay();returnToProfileOnClose=false;closeModal();window.backstageHoursTab='timesheet';window.backstageSelectedPayPeriod=currentPayPeriod();showPage('hours');renderHoursPage(u,currentPayPeriod(),false)}
+function openTimesheetPeriod(key){const u=currentUser();if(!u)return;const p=periodFromKey(key);if(!p)return;window.backstageHoursTab='timesheet';window.backstageSelectedPayPeriod=p;returnToProfileOnClose=false;closeModal();showPage('hours');renderHoursPage(u,p,true)}
 function submitHoursPeriod(){const u=currentUser(),p=currentPayPeriod();const rows=data.hours.filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end&&x.status!=='Submitted');if(!rows.length)return;openModal(`<h2>Submit Pay Period?</h2><p>You are about to submit <b>${rows.length} time entries</b> for <b>${p.start}</b> to <b>${p.end}</b>.</p><div class="profile-stat"><span>Hours</span><b>${formatHours(rows.reduce((a,x)=>a+minutesForHourEntry(x),0))}</b></div><p class="muted" style="margin-top:12px">⚠️ Once submitted, these hours <b>cannot be amended</b> by you. Please check your dates, times, jobs and pay rates before submitting.</p><div class="actions" style="margin-top:16px"><button class="secondary" onclick="openHoursTracker()">Go Back</button><button class="green" onclick="confirmSubmitHoursPeriod()">Yes, Submit Pay Period</button></div>`)}
 function confirmSubmitHoursPeriod(){const u=currentUser(),p=currentPayPeriod();const rows=data.hours.filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end&&x.status!=='Submitted');if(!rows.length)return openHoursTracker();rows.forEach(x=>x.status='Submitted');save();logActivity({itemName:u.name,action:'Hours submitted',at:new Date().toISOString()});save();openModal(`<h2>✅ Pay Period Submitted</h2><p>Your timesheet for <b>${p.start}</b> to <b>${p.end}</b> has been submitted.</p><p class="muted">These hours are now locked and cannot be amended from your crew profile.</p><button class="green" style="width:100%" onclick="openHoursTracker()">View Submitted Timesheet</button>`) }
 function openAdminHours(){const u=currentUser();if(!u||!canViewCrewHours())return alert('Director access required.');const p=currentPayPeriod();const groups=(data.users||[]).filter(x=>!x.cloudOnly).map(c=>{const rows=data.hours.filter(h=>h.userId===c.id&&h.date>=p.start&&h.date<=p.end);const sum=paySummary(c,p);return {u:c,rows,total:sum.minutes,gross:sum.gross,net:sum.net}});openModal(`<div class="section-head"><div><h2 style="margin:0">👷 Crew Hours</h2><div class="muted">${p.start} → ${p.end}</div></div><button onclick="exportHoursExcel()">📥 Excel</button></div><p class="muted">Only the Director can see crew timesheets.</p>${groups.map(g=>`<div class="admin-hours-row"><div><b>${esc(g.u.name)}</b><div class="small">${g.rows.length} entries • ${g.rows.every(x=>x.status==='Submitted')&&g.rows.length?'Submitted':'Draft'}</div></div><div style="text-align:right"><b>${formatHours(g.total)}</b><br><span class="small">Gross ${money(g.gross)} • Net ${money(g.net)}</span><br><button class="secondary" onclick="openCrewHoursForAdmin('${g.u.id}')">View</button></div></div>`).join('')}`)}
@@ -3403,4 +3499,25 @@ body:not(.light-theme) .fleet-booking-bar.off-island span { background-color: #d
 .hours-privacy-toggle{white-space:nowrap}
 .hours-money-blur{display:inline-block;filter:blur(5px);user-select:none;-webkit-user-select:none;opacity:.8;letter-spacing:2px}
 @media(max-width:520px){.hours-dashboard .section-head{align-items:flex-start;gap:8px}.hours-privacy-toggle{font-size:12px;padding:8px 10px}.hours-counter-grid .profile-stat{min-width:0}.hours-counter-grid .profile-stat b{font-size:17px}}
+
+.hours-period-banner{margin:12px 0;padding:13px 15px;border:1px solid var(--regency-border);border-radius:13px;background:var(--regency-panel-2);display:flex;flex-direction:column;gap:4px}
+.hours-counter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.hours-privacy-toggle{white-space:nowrap}
+.hours-money-blur{display:inline-block;filter:blur(5px);user-select:none;-webkit-user-select:none;opacity:.82;letter-spacing:2px}
+.hours-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:14px 0}
+.hours-tabs button{padding:11px 6px;border:1px solid var(--regency-border);border-radius:11px;background:var(--regency-panel-2);color:var(--regency-text);font-weight:700}
+.hours-tabs button.active{background:var(--regency-green);border-color:var(--regency-green);color:#fff}
+.hours-history-tools{display:grid;grid-template-columns:1fr 110px;gap:8px;margin:12px 0}
+.hours-history-row{width:100%;display:grid;grid-template-columns:30px minmax(0,1fr) auto 12px;gap:8px;align-items:center;text-align:left;padding:13px 10px;margin:7px 0;border:1px solid var(--regency-border);border-radius:13px;background:var(--regency-panel-2);color:var(--regency-text)}
+.hours-history-icon{font-size:21px;color:var(--regency-green)}
+.hours-history-copy,.hours-history-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.hours-history-copy b{font-size:13px}
+.hours-history-copy small,.hours-history-meta b{font-size:12px;color:var(--regency-muted)}
+.hours-history-meta{align-items:flex-end}
+.hours-history-meta em{font-style:normal;font-size:10px;font-weight:800;padding:3px 7px;border-radius:20px;border:1px solid var(--regency-border)}
+.hours-history-meta em.current{color:#8fe5ad;border-color:#16a35b;background:rgba(22,163,91,.12)}.hours-history-row.current{border-color:#16a35b}.hours-history-meta em.approved{color:#80d9a2;border-color:#28784b}
+.hours-history-meta em.saved{color:#e6bd69;border-color:#82652d}
+.timesheet-day-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.timesheet-day-head button{padding:6px 9px;font-size:12px}
+@media(max-width:520px){.hours-dashboard .section-head{align-items:flex-start;gap:8px}.hours-privacy-toggle{font-size:12px;padding:8px 10px}.hours-history-row{grid-template-columns:24px minmax(0,1fr) auto 8px;padding:11px 7px}.hours-history-copy b{font-size:12px}.hours-history-meta b{font-size:11px}.hours-counter-grid .profile-stat b{font-size:17px}}
 </style>
