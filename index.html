@@ -708,6 +708,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
  <button class="menu-drawer-link" data-page="activity" onclick="menuShowPage('activity')"><span class="menu-icon">📈</span>Activity Tracker</button>
  <button class="menu-drawer-link" data-page="expenseClaims" onclick="menuShowPage('expenseClaims')"><span class="menu-icon">💷</span>Expense Claims</button>
  <button class="menu-drawer-link" data-page="reportsData" onclick="menuShowPage('reportsData')"><span class="menu-icon">📊</span>Reports &amp; Data</button>
+ <button class="menu-drawer-link" data-page="vehicleMaintenance" onclick="menuShowPage('vehicleMaintenance')"><span class="menu-icon">🔧</span>Vehicle Maintenance</button>
  <div class="menu-drawer-label">DASHBOARD TOOLS</div>
  <div class="google-sync-card" style="margin:6px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
@@ -733,6 +734,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 <section id="hireVehicles" class="hidden"></section>
 <section id="expenseClaims" class="hidden"></section>
 <section id="reportsData" class="hidden"></section>
+<section id="vehicleMaintenance" class="hidden"></section>
 <section id="scanner" class="hidden">
 <div class="card"><h2>Scan equipment</h2><div id="reader"></div><p class="muted">Allow camera access, then scan an equipment QR code or an existing QR/barcode linked to equipment.</p><button class="secondary" onclick="stopScan();showPage('dashboard')">Close scanner</button></div>
 </section>
@@ -1227,83 +1229,24 @@ function reportMatches(row){
  return true;
 }
 function reportDataSets(){
- const errors=[];
- const safe=(label,fn)=>{try{const v=fn();return Array.isArray(v)?v:[]}catch(e){errors.push(label+': '+(e&&e.message?e.message:String(e)));console.error('Reports data source failed:',label,e);return [];}};
- const list=v=>Array.isArray(v)?v.filter(Boolean):[];
- const events=safe('Jobs/events',()=>list(data.events).map(j=>({
-  id:j.id,name:j.name||j.title||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',
-  start:j.date||j.startDate||j.start||'',end:j.endDate||j.finishDate||j.end||j.date||'',
-  onsite:j.onsiteDate||j.buildDate||j.setupDate||'',breakdown:j.breakdownDate||j.derigDate||'',
-  status:j.status||'',crew:(()=>{try{return eventCrewText(j)}catch(e){return list(j.crew).join(', ')}})(),
-  vehicles:(()=>{try{return eventVanText(j)}catch(e){return list(j.vehicles).join(', ')}})(),
-  what3words:j.what3words||'',notes:j.notes||'',source:j
- })));
- const jobs=safe('Jobs records',()=>list(data.jobs).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({
-  id:j.id,name:j.name||j.title||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',
-  start:j.date||j.startDate||j.start||'',end:j.endDate||j.date||j.end||'',onsite:j.onsiteDate||j.buildDate||'',
-  breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',
-  crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),
-  what3words:j.what3words||'',notes:j.notes||'',source:j
- })));
- const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id||'','Job Name':j.name,Customer:j.customer,Venue:j.venue,
-  'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),
-  'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
+ const events=arr(data.events).filter(Boolean).map(j=>({id:j.id,name:j.name||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.finishDate||j.date||'',onsite:j.onsiteDate||j.buildDate||'',breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',crew:eventCrewText(j)||'',vehicles:eventVanText(j)||'',what3words:j.what3words||'',notes:j.notes||'',source:j}));
+ const jobs=arr(data.jobs).filter(Boolean).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({id:j.id,name:j.name||j.title||'',customer:j.customer||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.date||'',onsite:j.onsiteDate||'',breakdown:j.breakdownDate||'',status:j.status||'',crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),what3words:j.what3words||'',notes:j.notes||'',source:j}));
+ const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id,'Job Name':j.name,Customer:j.customer,Venue:j.venue,'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
  const stockRows=[];
- safe('Stock allocations',()=>{
-  ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>list(data[key]).forEach(item=>{
-   list(item.allocations).forEach(a=>{
-    const e=events.find(x=>String(x.id)===String(a.jobId)||String(x.source.avJobId||'')===String(a.jobId));
-    const j=jobs.find(x=>String(x.id)===String(a.jobId));
-    const p=list(data.portalooJobs).find(x=>String(x.id)===String(a.jobId));
-    if(!e&&!j&&!p)return;
-    stockRows.push({'Job Name':e?.name||j?.name||p?.name||a.jobName||'','Job ID':a.jobId||'',
-     'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'',
-     Category:item.category||key,Quantity:Number(a.qty||a.quantity)||1,
-     'Allocated Date':reportDate(a.date||e?.start||j?.start||p?.startDate),
-     Returned:a.returned===true?'Yes':a.returned===false?'No':'Not recorded'});
-   });
-  }));
- });
- safe('Stock usage history',()=>{
-  ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>list(data[key]).forEach(item=>{
-   list(item.usageHistory||item.usage).forEach(u=>{
-    const jobId=u.jobId||u.id;
-    const e=events.find(x=>String(x.id)===String(jobId)||String(x.source.avJobId||'')===String(jobId));
-    const j=jobs.find(x=>String(x.id)===String(jobId));if(!e&&!j)return;
-    stockRows.push({'Job Name':e?.name||j?.name||u.jobName||'','Job ID':jobId||'',
-     'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'',
-     Category:item.category||key,Quantity:Number(u.qty||u.quantity)||1,
-     'Allocated Date':reportDate(u.date||u.at||e?.start||j?.start),
-     Returned:u.returned===true?'Yes':u.returned===false?'No':'Not recorded'});
-   });
-  }));
+ ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>arr(data[key]).forEach(item=>arr(item.allocations).forEach(a=>{
+   const e=events.find(x=>String(x.id)===String(a.jobId)||String(x.source.avJobId||'')===String(a.jobId));
+   const j=jobs.find(x=>String(x.id)===String(a.jobId));const p=arr(data.portalooJobs).find(x=>String(x.id)===String(a.jobId));
+   if(!e&&!j&&!p)return;
+   stockRows.push({'Job Name':e?.name||j?.name||p?.name||'','Job ID':a.jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||key,'Quantity':Number(a.qty)||1,'Allocated Date':reportDate(a.date||e?.start||j?.start||p?.startDate),'Returned':a.returned===true?'Yes':a.returned===false?'No':'Not recorded'});
+ })));
+ arr(['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].flatMap(key=>arr(data[key]))).forEach(item=>{
+   const history=arr(item.usageHistory||item.usage);
+   history.forEach(u=>{const jobId=u.jobId||u.id;const event=events.find(x=>String(x.id)===String(jobId)||String(x.source.avJobId||'')===String(jobId));const job=jobs.find(x=>String(x.id)===String(jobId));if(!event&&!job)return;stockRows.push({'Job Name':event?.name||job?.name||u.jobName||'','Job ID':jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||'Equipment','Quantity':Number(u.qty||u.quantity)||1,'Allocated Date':reportDate(u.date||u.at||event?.start||job?.start),'Returned':u.returned===true?'Yes':u.returned===false?'No':'Not recorded'});});
  });
  const crewRows=jobRows.map(r=>({'Job Name':r['Job Name'],Customer:r.Customer,Crew:r.Crew,Vehicles:r.Vehicles,Status:r.Status}));
- const hires=safe('Hire van records',()=>{
-  const hv=(data.v51&&data.v51.hireVehicles)||[];
-  return list(hv).map(v=>({
-   'Booking ID':v.id||'',Vehicle:v.vehicleName||v.vanName||v.name||'',Registration:v.registration||v.reg||'',
-   Customer:v.customer||v.customerName||'','Hire Type':reportHireType(v),
-   'Hire Start':reportDate(v.start||v.startDate),'Hire End':reportDate(v.end||v.endDate),
-   'Actual Return Date':reportDate(v.returnedAt||v.actualReturnDate||v.returnDate),
-   'Hire Status':(()=>{try{return vehicleStatus(v)}catch(e){return v.returned?'Returned':v.status||'Unknown'}})(),
-   Status:v.status||'',Area:v.area||v.hireType||v.locationType||'',Notes:v.notes||''
-  }));
- });
- const portaloo=safe('Portaloo hire records',()=>list(data.portalooJobs).map(j=>({
-  'Job ID':j.id||'','Job Name':j.name||j.title||'',Customer:j.customer||j.client||'',
-  Location:j.location||j.siteAddress||j.address||'',What3words:j.what3words||'',
-  'Delivery Date':reportDate(j.startDate||j.date||j.start),'Collection Date':reportDate(j.endDate||j.returnDate||j.end),
-  'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,
-  'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,
-  'Total Units':(()=>{try{return portalooUnitTotal(j)}catch(e){return (Number(j.unit1)||0)+(Number(j.unit2)||0)+(Number(j.unit3)||0)}})(),
-  Status:j.status||'','Next Service':(()=>{try{return reportDate(portalooServiceDueDate(j))}catch(e){return reportDate(j.nextServiceDate)}})(),Notes:j.notes||''
- })));
- const portalooService=safe('Portaloo service history',()=>list(data.portalooJobs).flatMap(j=>list(j.serviceHistory||j.services).map(x=>({
-  'Portaloo Job':j.name||j.title||'',Customer:j.customer||'','Service Date':reportDate(x.date||x.serviceDate),
-  'Service Type':x.type||x.description||'',Notes:x.notes||''
- }))));
- window._reportDataErrors=errors;
+ const hires=arr(ensureV51().hireVehicles).filter(Boolean).map(v=>({'Booking ID':v.id,Vehicle:v.vehicleName||'',Registration:v.registration||'',Customer:v.customer||'','Hire Type':reportHireType(v),'Hire Start':reportDate(v.start),'Hire End':reportDate(v.end),'Actual Return Date':v.returnedAt?reportDate(v.returnedAt):'','Hire Status':vehicleStatus(v),Status:vehicleStatus(v),'Raw Booking Status':v.status||'',Area:v.area||'',Notes:v.notes||''}));
+ const portaloo=arr(data.portalooJobs).filter(Boolean).map(j=>({'Job ID':j.id,'Job Name':j.name||'',Customer:j.customer||j.client||'',Location:j.location||j.siteAddress||'',What3words:j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,'Total Units':portalooUnitTotal(j),'Status':j.status||'','Next Service':reportDate(portalooServiceDueDate(j)),Notes:j.notes||''}));
+ const portalooService=arr(data.portalooJobs).filter(Boolean).flatMap(j=>arr(j.serviceHistory||j.services).filter(Boolean).map(s=>({'Portaloo Job':j.name||'',Customer:j.customer||'','Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'',Notes:s.notes||''})));
  return {jobs:jobRows,stock:stockRows,crew:crewRows,hires,portaloo,portalooService};
 }
 function reportFilterRows(rows){return rows.filter(reportMatches);}
@@ -1322,7 +1265,7 @@ function renderReportsData(){
  #reportsData .report-export{width:100%;margin-top:10px}
  @media(max-width:650px){#reportsData .report-grid{grid-template-columns:1fr}#reportsData .report-filters{grid-template-columns:1fr 1fr}}
  </style>
- <div class="report-hero"><h2 style="margin:0 0 6px">📊 Reports &amp; Data</h2><div class="muted">Search, filter and export operational history to Excel. Exports never change live records.</div></div><div id="reportSourceDiagnostics" class="small muted" style="margin:-4px 0 12px"></div>
+ <div class="report-hero"><h2 style="margin:0 0 6px">📊 Reports &amp; Data</h2><div class="muted">Search, filter and export operational history to Excel. Exports never change live records.</div></div>
  <div class="card"><h3 style="margin-top:0">Filter records</h3><div class="report-filters">
  <label>Search<input id="reportSearch" value="${esc(f.search)}" placeholder="Job, customer, vehicle…" oninput="updateReportFilter('search',this.value)"></label>
  <label>From date<input id="reportFrom" type="date" value="${esc(f.from)}" onchange="updateReportFilter('from',this.value)"></label>
@@ -1331,8 +1274,7 @@ function renderReportsData(){
  <div class="actions"><button class="secondary" onclick="resetReportFilters()">Clear filters</button><span class="small muted">Date filters use the record start/event date.</span></div></div>
  <div class="report-grid">${cards.map(([key,icon,title,desc])=>`<div class="report-tile"><div style="font-size:26px">${icon}</div><h3 style="margin:6px 0">${title}</h3><div class="small muted">${desc}</div><div style="font-size:24px;font-weight:800;margin-top:12px">${count(key)} <span class="small muted">records</span></div><button class="report-export" onclick="exportReport('${key}')">⬇ Export ${title} Excel</button></div>`).join('')}</div>
  <div class="card"><h3 style="margin-top:0">Export preview</h3><div class="actions" style="flex-wrap:wrap">${cards.map(([k,ic,t])=>`<button class="secondary" onclick="setReportPreview('${k}')">${ic} ${t}</button>`).join('')}</div><div id="reportPreview"></div></div>`;
- const status=document.getElementById('reportStatus');if(status)status.value=f.status||'all';window._reportPreviewKey=window._reportPreviewKey||'jobs';try{renderReportPreview();}catch(previewError){console.error('Report preview failed',previewError);const preview=document.getElementById('reportPreview');if(preview)preview.textContent='Preview unavailable: '+(previewError.message||String(previewError));}
- const diag=document.getElementById('reportSourceDiagnostics');if(diag){const errs=window._reportDataErrors||[];diag.textContent=errs.length?'Some record groups could not be read: '+errs.join(' | '):'Live records loaded from this device/cloud sync.';}
+ const status=document.getElementById('reportStatus');if(status)status.value=f.status||'all';window._reportPreviewKey=window._reportPreviewKey||'jobs';renderReportPreview();
 }
 window.updateReportFilter=function(k,v){window._reportsDataFilters[k]=v;renderReportsData();const input=document.getElementById(k==='search'?'reportSearch':k==='from'?'reportFrom':k==='to'?'reportTo':'reportStatus');if(input&&k==='search'){input.focus();input.setSelectionRange(input.value.length,input.value.length);}};
 window.resetReportFilters=function(){window._reportsDataFilters={search:'',from:'',to:'',status:'all'};renderReportsData();};
@@ -1352,16 +1294,135 @@ window.exportReport=function(key){
  XLSX.writeFile(wb,'Backstage-'+({jobs:'Jobs',hires:'Hire-Vans',portaloo:'Portaloo'}[key]||key)+'-Report-'+new Date().toISOString().slice(0,10)+'.xlsx');
 };
 
+
+/* ---------- Vehicle Maintenance & Defect Management ---------- */
+function maintenanceStore(){
+ const s=ensureV51();
+ s.vehicleMaintenance=Array.isArray(s.vehicleMaintenance)?s.vehicleMaintenance:[];
+ s.vehicleDefects=Array.isArray(s.vehicleDefects)?s.vehicleDefects:[];
+ return s;
+}
+function maintenanceVehicle(id){return (Array.isArray(data.vans)?data.vans:[]).find(v=>String(v.id)===String(id));}
+function maintenanceVehicleName(v){return [v?.name||'Unnamed vehicle',v?.registration||v?.asset||''].filter(Boolean).join(' · ');}
+function maintenanceCanSignOff(){
+ const u=me()||{},r=String(u.role||u.access||'').toLowerCase();
+ return (typeof isDirector==='function'&&isDirector())||r.includes('manager')||r.includes('director');
+}
+function renderVehicleMaintenance(){
+ const el=document.getElementById('vehicleMaintenance');if(!el)return;
+ const s=maintenanceStore(),vans=(Array.isArray(data.vans)?data.vans:[]).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+ const today=new Date().toISOString().slice(0,10),soon=new Date(Date.now()+14*86400000).toISOString().slice(0,10);
+ s.vehicleMaintenance.filter(x=>x.status==='Planned'&&x.date&&x.date<=soon).forEach(x=>{const v=maintenanceVehicle(x.vehicleId);if(typeof addNotification==='function')addNotification(x.date<today?'warning':'info',x.date<today?'Vehicle maintenance overdue':'Vehicle maintenance due soon',`${v?.name||'Vehicle'}: ${x.type} scheduled for ${x.date}.`,'vehicle-service-due-'+x.id);});
+ const selected=window._maintenanceVehicleId||vans[0]?.id||'';
+ if(!window._maintenanceVehicleId)window._maintenanceVehicleId=selected;
+ const vehicle=maintenanceVehicle(selected);
+ const services=s.vehicleMaintenance.filter(x=>String(x.vehicleId)===String(selected)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+ const defects=s.vehicleDefects.filter(x=>String(x.vehicleId)===String(selected)).sort((a,b)=>(b.reportedAt||'').localeCompare(a.reportedAt||''));
+ const open=defects.filter(d=>d.status!=='Closed');
+ const due=services.filter(x=>x.status==='Planned');
+ const critical=open.filter(d=>d.priority==='Critical').length;
+ el.innerHTML=`<style>
+ #vehicleMaintenance .vm-hero{background:linear-gradient(135deg,#10251b,#142d21);border:1px solid #315440;border-radius:18px;padding:18px;margin-bottom:14px}
+ #vehicleMaintenance .vm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+ #vehicleMaintenance .vm-stat{background:#14251d;border:1px solid #294536;border-radius:14px;padding:13px}
+ #vehicleMaintenance .vm-panel{background:#101d16;border:1px solid #294536;border-radius:15px;padding:15px;margin:12px 0}
+ #vehicleMaintenance .vm-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ #vehicleMaintenance .vm-form label{display:flex;flex-direction:column;gap:5px;font-size:13px;color:#b8c9bf}
+ #vehicleMaintenance input,#vehicleMaintenance select,#vehicleMaintenance textarea{width:100%;min-width:0;background:#0b1510;color:#edf5ef;border:1px solid #355343;border-radius:9px;padding:10px}
+ #vehicleMaintenance textarea{min-height:76px}
+ #vehicleMaintenance .vm-record{background:#14251d;border:1px solid #294536;border-radius:12px;padding:13px;margin:9px 0}
+ #vehicleMaintenance .vm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+ #vehicleMaintenance .vm-pill{display:inline-block;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:800;background:#26382e;color:#d9eee0}
+ #vehicleMaintenance .vm-pill.critical{background:#542727;color:#ffb7b7}
+ #vehicleMaintenance .vm-pill.high{background:#503719;color:#ffdb9b}
+ #vehicleMaintenance .vm-pill.done{background:#173d2c;color:#b8f2cc}
+ #vehicleMaintenance .vm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+ @media(max-width:650px){#vehicleMaintenance .vm-grid{grid-template-columns:repeat(3,minmax(0,1fr))}#vehicleMaintenance .vm-form{grid-template-columns:1fr}}
+ </style>
+ <div class="vm-hero"><h2 style="margin:0 0 5px">🔧 Vehicle Maintenance</h2><div class="muted">Service history, planned work and vehicle defect tracking. MOT records are not included.</div></div>
+ <div class="vm-panel"><label style="display:block;margin-bottom:7px">Select vehicle</label><select id="vmVehicle" onchange="selectMaintenanceVehicle(this.value)">${vans.map(v=>`<option value="${escV(v.id)}" ${String(v.id)===String(selected)?'selected':''}>${escV(maintenanceVehicleName(v))}</option>`).join('')}</select>
+ ${vehicle?`<div class="vm-row" style="margin-top:12px"><div><b style="font-size:18px">${escV(vehicle.name||'Unnamed vehicle')}</b><div class="muted">${escV(vehicle.registration||vehicle.asset||'Registration not recorded')}</div></div><span class="vm-pill ${vehicle.maintenanceHold?'critical':'done'}">${vehicle.maintenanceHold?'OUT OF SERVICE':'IN FLEET'}</span></div>`:'<p class="muted">No fleet vehicles found. Add vehicles to Equipment first.</p>'}</div>
+ <div class="vm-grid">
+ <div class="vm-stat"><b style="font-size:25px">${services.length}</b><div class="muted small">Service records</div></div>
+ <div class="vm-stat"><b style="font-size:25px">${due.length}</b><div class="muted small">Planned work</div></div>
+ <div class="vm-stat"><b style="font-size:25px;color:${open.length?'#f2c66d':'#b8f2cc'}">${open.length}</b><div class="muted small">Open defects</div></div>
+ </div>
+ ${critical?`<div class="vm-panel" style="border-color:#a33;background:#321b1b"><b style="color:#ffb7b7">⛔ ${critical} critical defect(s)</b><div class="muted">This vehicle is marked out of service until authorised sign-off.</div></div>`:''}
+ <div class="vm-panel"><h3 style="margin-top:0">＋ Add service or planned work</h3>
+ <form class="vm-form" onsubmit="saveVehicleService(event)">
+ <label>Work type<select name="type"><option>Routine service</option><option>Repair</option><option>Tyres</option><option>Brakes</option><option>Fluids</option><option>Inspection</option><option>Other</option></select></label>
+ <label>Record status<select name="status"><option value="Planned">To be done</option><option value="Completed">Completed</option></select></label>
+ <label>Date<input name="date" type="date" value="${new Date().toISOString().slice(0,10)}" required></label>
+ <label>Mileage<input name="mileage" type="number" min="0" placeholder="Mileage at service"></label>
+ <label>Garage / mechanic<input name="provider" placeholder="Who is doing the work?"></label>
+ <label>Next service date<input name="nextDate" type="date"></label>
+ <label>Parts cost (£)<input name="partsCost" type="number" min="0" step="0.01"></label>
+ <label>Labour cost (£)<input name="labourCost" type="number" min="0" step="0.01"></label>
+ <label style="grid-column:1/-1">Work required / completed<textarea name="description" required placeholder="Describe the work, parts used and any notes"></textarea></label>
+ <label style="grid-column:1/-1">Next service mileage<input name="nextMileage" type="number" min="0" placeholder="Optional"></label>
+ <div style="grid-column:1/-1"><button type="submit">Save service record</button></div>
+ </form></div>
+ <div class="vm-panel"><h3 style="margin-top:0">⚠️ Report a vehicle problem</h3>
+ <form class="vm-form" onsubmit="saveVehicleDefect(event)">
+ <label>Problem priority<select name="priority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
+ <label>Reported mileage<input name="mileage" type="number" min="0" placeholder="Current mileage"></label>
+ <label style="grid-column:1/-1">Problem / symptoms<textarea name="description" required placeholder="What is wrong with the vehicle?"></textarea></label>
+ <label>Location<input name="location" placeholder="Where is the vehicle?"></label>
+ <label>Assign to<input name="assignedTo" placeholder="Mechanic / person responsible"></label>
+ <div style="grid-column:1/-1"><button type="submit" class="danger">＋ Submit defect report</button></div>
+ </form><div class="small muted" style="margin-top:8px">Critical defects automatically place the vehicle out of service. Do not use a vehicle with a safety-critical defect.</div></div>
+ <div class="vm-panel"><h3 style="margin-top:0">Service history & planned work</h3>${services.length?services.map(x=>`<div class="vm-record"><div class="vm-row"><b>${escV(x.type)} · ${escV(x.date)}</b><span class="vm-pill ${x.status==='Completed'?'done':''}">${escV(x.status)}</span></div><div style="margin-top:6px">${escV(x.description)}</div><div class="muted small" style="margin-top:5px">${x.mileage?`Mileage: ${escV(x.mileage)} · `:''}${x.provider?`Provider: ${escV(x.provider)} · `:''}Parts £${Number(x.partsCost||0).toFixed(2)} · Labour £${Number(x.labourCost||0).toFixed(2)}</div>${x.nextDate||x.nextMileage?`<div class="small" style="margin-top:5px;color:#b8f2cc">Next service: ${escV(x.nextDate||'Date not set')}${x.nextMileage?' · '+escV(x.nextMileage)+' miles':''}</div>`:''}</div>`).join(''):'<div class="empty">No service records for this vehicle yet.</div>'}</div>
+ <div class="vm-panel"><h3 style="margin-top:0">Defect reports</h3>${defects.length?defects.map(d=>`<div class="vm-record"><div class="vm-row"><b>Defect #${escV(d.id)}</b><span class="vm-pill ${d.priority==='Critical'?'critical':d.priority==='High'?'high':d.status==='Closed'?'done':''}">${escV(d.priority)} · ${escV(d.status)}</span></div><div class="small muted">${escV(new Date(d.reportedAt).toLocaleString('en-GB'))} · ${escV(d.reportedBy||'Crew member')}${d.mileage?' · '+escV(d.mileage)+' miles':''}</div><p>${escV(d.description)}</p>${d.location?`<div class="small muted">Location: ${escV(d.location)}</div>`:''}${d.assignedTo?`<div class="small muted">Assigned to: ${escV(d.assignedTo)}</div>`:''}${d.repairNotes?`<div class="small">Repair: ${escV(d.repairNotes)}</div>`:''}${d.checkedBy?`<div class="small muted">Signed off by ${escV(d.checkedBy)} · ${escV(d.closedAt||'')}</div>`:''}
+ <div class="vm-actions">${d.status==='Open'?`<button class="secondary" onclick="updateVehicleDefect('${escV(d.id)}','In Progress')">Assign / start work</button>`:''}${d.status==='In Progress'?`<button class="secondary" onclick="completeVehicleDefect('${escV(d.id)}')">Mark repair complete</button>`:''}${d.status==='Awaiting Check'?(maintenanceCanSignOff()?`<button onclick="signOffVehicleDefect('${escV(d.id)}')">Check &amp; sign off</button>`:'<span class="small muted">Awaiting authorised sign-off</span>'):''}</div></div>`).join(''):'<div class="empty">No reported problems for this vehicle.</div>'}</div>`;
+}
+window.selectMaintenanceVehicle=function(id){window._maintenanceVehicleId=id;renderVehicleMaintenance();};
+window.saveVehicleService=function(e){
+ e.preventDefault();const f=e.target,s=maintenanceStore(),v=maintenanceVehicle(window._maintenanceVehicleId);if(!v)return;
+ const fd=new FormData(f),record={id:makeId('svc'),vehicleId:v.id,type:String(fd.get('type')||'Other'),status:String(fd.get('status')||'Planned'),date:String(fd.get('date')||''),mileage:String(fd.get('mileage')||''),provider:String(fd.get('provider')||''),nextDate:String(fd.get('nextDate')||''),nextMileage:String(fd.get('nextMileage')||''),partsCost:Number(fd.get('partsCost')||0),labourCost:Number(fd.get('labourCost')||0),description:String(fd.get('description')||''),createdAt:new Date().toISOString(),createdBy:(me()||{}).name||'Crew'};
+ s.vehicleMaintenance.unshift(record);persist();if(typeof addNotification==='function')addNotification('info','Vehicle service record added',`${v.name||'Vehicle'}: ${record.type} recorded.`,'vehicle-service-'+record.id);renderVehicleMaintenance();
+};
+window.saveVehicleDefect=function(e){
+ e.preventDefault();const f=e.target,s=maintenanceStore(),v=maintenanceVehicle(window._maintenanceVehicleId);if(!v)return;
+ const fd=new FormData(f),priority=String(fd.get('priority')||'Low'),d={id:makeId('def'),vehicleId:v.id,priority,status:'Open',description:String(fd.get('description')||''),mileage:String(fd.get('mileage')||''),location:String(fd.get('location')||''),assignedTo:String(fd.get('assignedTo')||''),reportedAt:new Date().toISOString(),reportedBy:(me()||{}).name||'Crew',repairNotes:'',createdAt:new Date().toISOString()};
+ s.vehicleDefects.unshift(d);
+ if(priority==='Critical'){v.maintenanceHold=true;v.maintenancePreviousStatus={status:v.status||'',availability:v.availability||'',hireStatus:v.hireStatus||''};v.maintenanceHoldReason=d.description;v.status='Unavailable';v.availability='Unavailable';v.hireStatus='Unavailable';}
+ persist();if(typeof addNotification==='function')addNotification(priority==='Critical'?'danger':'warning','Vehicle defect reported',`${v.name||'Vehicle'}: ${d.description}${priority==='Critical'?' Vehicle automatically marked OUT OF SERVICE.':''}`,'vehicle-defect-'+d.id,{phone:true});
+ renderVehicleMaintenance();if(typeof renderDash==='function')renderDash();if(typeof renderHireVehicles==='function')renderHireVehicles();
+};
+window.updateVehicleDefect=function(id,status){
+ const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status==='Closed')return;
+ d.status=status;d.updatedAt=new Date().toISOString();if(status==='In Progress'&&typeof addNotification==='function')addNotification('info','Vehicle repair started',`Defect #${d.id} is now in progress.`,'vehicle-defect-progress-'+d.id);
+ persist();renderVehicleMaintenance();
+};
+window.completeVehicleDefect=function(id){
+ const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status!=='In Progress')return;
+ const notes=prompt('Enter the repair work completed, parts replaced and any test results:');if(notes===null||!notes.trim())return;
+ d.repairNotes=notes.trim();d.status='Awaiting Check';d.repairCompletedAt=new Date().toISOString();d.repairedBy=(me()||{}).name||'Crew';persist();
+ if(typeof addNotification==='function')addNotification('warning','Vehicle awaiting repair sign-off',`Defect #${d.id} on ${(maintenanceVehicle(d.vehicleId)||{}).name||'vehicle'} is awaiting an authorised check.`,'vehicle-defect-check-'+d.id,{phone:true});
+ renderVehicleMaintenance();
+};
+window.signOffVehicleDefect=function(id){
+ if(!maintenanceCanSignOff()){alert('Only a director or authorised manager can sign off a vehicle repair.');return;}
+ const s=maintenanceStore(),d=s.vehicleDefects.find(x=>String(x.id)===String(id));if(!d||d.status!=='Awaiting Check')return;
+ const check=prompt('Record the inspection / road test and why the vehicle is safe to return to service:');if(check===null||!check.trim())return;
+ d.checkNotes=check.trim();d.status='Closed';d.checkedBy=(me()||{}).name||'Authorised manager';d.closedAt=new Date().toISOString();
+ const v=maintenanceVehicle(d.vehicleId);
+ if(v&&v.maintenanceHold){const other=s.vehicleDefects.some(x=>String(x.vehicleId)===String(v.id)&&String(x.id)!==String(d.id)&&x.priority==='Critical'&&x.status!=='Closed');if(!other){v.maintenanceHold=false;v.maintenanceHoldReason='';const prev=v.maintenancePreviousStatus||{};v.status=prev.status||'Available';v.availability=prev.availability||'Available';v.hireStatus=prev.hireStatus||'Available';delete v.maintenancePreviousStatus;}}
+ persist();if(typeof addNotification==='function')addNotification('success','Vehicle defect signed off',`${v?.name||'Vehicle'} defect #${d.id} has been checked and closed.`,'vehicle-defect-closed-'+d.id,{phone:true});
+ renderVehicleMaintenance();if(typeof renderDash==='function')renderDash();if(typeof renderHireVehicles==='function')renderHireVehicles();
+};
+
 function showPage(page){
  if(!requireLogin())return;
  if(page==='marquee')page='equipment';
- ['dashboard','create','equipment','events','jobs','portaloo','marquee','activity','notifications','windForecast','hours','crewManagement','appTutorials','healthSafety','crewHealthSafety','crewLoginEdit','scanner','hireVehicles','expenseClaims','reportsData'].forEach(id=>{
+ ['dashboard','create','equipment','events','jobs','portaloo','marquee','activity','notifications','windForecast','hours','crewManagement','appTutorials','healthSafety','crewHealthSafety','crewLoginEdit','scanner','hireVehicles','expenseClaims','reportsData','vehicleMaintenance'].forEach(id=>{
    const el=document.getElementById(id);
    if(el)el.classList.toggle('hidden',id!==page);
  });
  if(page==='scanner')startScan();else stopScan();
  render();
- if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>Reports could not finish loading: '+safeText(err&&err.message?err.message:String(err))+'</p><p class="muted">No live records have been changed. Please share this error if it persists.</p></div>';}}
+ if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem reading the records. Please refresh and try again.</p><p class="muted">The live records have not been changed.</p></div>';}}
+ if(page==='vehicleMaintenance')renderVehicleMaintenance();
  if(page==='windForecast')loadWindForecast();
  window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1742,11 +1803,11 @@ function renderEquipment(){
  ];
  if(!cats.some(c=>c.id===selectedEquipmentCategory))selectedEquipmentCategory='av';const cat=cats.find(c=>c.id===selectedEquipmentCategory);
  const matches=(cat.arr||[]).filter(x=>(String(x.name||'')+' '+String(x.asset||'')+' '+String(x.registration||'')+' '+String(x.category||'')+' '+String(x.status||'')+' '+String(x.qrCode||'')).toLowerCase().includes(q.toLowerCase()));
- const isVehicle=cat.id==='vehicles';const total=isVehicle?matches.length:matches.reduce((n,x)=>n+(Number(x.totalQty)||1),0);const available=isVehicle?matches.filter(x=>!x.isHired&&x.availability!=='On Hire'&&x.status!=='On Hire').length:matches.reduce((n,x)=>n+stockAvailable(x,new Date().toISOString().slice(0,10)),0);
+ const isVehicle=cat.id==='vehicles';const total=isVehicle?matches.length:matches.reduce((n,x)=>n+(Number(x.totalQty)||1),0);const available=isVehicle?matches.filter(x=>!x.maintenanceHold&&!x.isHired&&x.availability!=='On Hire'&&x.status!=='On Hire').length:matches.reduce((n,x)=>n+stockAvailable(x,new Date().toISOString().slice(0,10)),0);
  const tabs=cats.map(c=>`<button class="${c.id===selectedEquipmentCategory?'':'secondary'}" style="min-height:44px" onclick="selectedEquipmentCategory='${c.id}';renderEquipment()">${c.label}</button>`).join('');
  const cards=matches.map(x=>{
   if(cat.id==='av')return itemCard(x);
-  if(isVehicle)return `<div class="card"><div class="row">${photoHtml(x.photo)}<div style="flex:1"><b>${esc(x.name)}</b><div class="muted">${esc(x.registration||'No registration recorded')}</div><div class="muted">${esc(x.hireStatus||x.status||x.availability||'Fleet vehicle')}</div></div><span class="badge">${x.isHired||x.status==='On Hire'?'On Hire':'In Fleet'}</span></div><div class="actions"><button class="secondary" onclick="editVan('${x.id}')">Edit</button><button class="danger" onclick="deleteVan('${x.id}')">Remove</button></div></div>`;
+  if(isVehicle)return `<div class="card"><div class="row">${photoHtml(x.photo)}<div style="flex:1"><b>${esc(x.name)}</b><div class="muted">${esc(x.registration||'No registration recorded')}</div><div class="muted">${esc(x.maintenanceHold?'OUT OF SERVICE · Defect reported':x.hireStatus||x.status||x.availability||'Fleet vehicle')}</div></div><span class="badge" style="${x.maintenanceHold?'background:#542727;color:#ffb7b7': ''}">${x.maintenanceHold?'⚠️ Defect':x.isHired||x.status==='On Hire'?'On Hire':'In Fleet'}</span></div><div class="actions"><button class="secondary" onclick="window._maintenanceVehicleId='${x.id}';showPage('vehicleMaintenance')">🔧 Service &amp; Defects</button><button class="secondary" onclick="editVan('${x.id}')">Edit</button><button class="danger" onclick="deleteVan('${x.id}')">Remove</button></div></div>`;
   const avail=stockAvailable(x,new Date().toISOString().slice(0,10));const edit=cat.id==='furniture'?`editFurnitureProp('${x.id}')`:cat.id==='power'||cat.id==='marquee'||cat.id==='paChillers'?`editSectionInventory('${cat.id}','${x.id}')`:`editPortalooEquipment('${x.id}')`;const del=cat.id==='furniture'?`deleteFurnitureProp('${x.id}')`:cat.id==='power'||cat.id==='marquee'||cat.id==='paChillers'?`deleteSectionInventory('${cat.id}','${x.id}')`:`deletePortalooEquipment('${x.id}')`;return `<div class="card"><div class="row">${photoHtml(x.photo)}<div style="flex:1"><b>${esc(x.name)}</b><div class="muted">${esc(x.category||cat.label)} • ${esc(x.asset||'')}</div><div class="muted">${avail} available of ${Number(x.totalQty)||1}</div></div><span class="badge">${avail>0?'Available':'Booked'}</span></div><div class="actions"><button class="secondary" onclick="v56ShowStockHistory('${cat.id}','${x.id}')">History</button><button class="secondary" onclick="${edit}">Edit</button><button class="danger" onclick="${del}">Delete</button></div></div>`;
  }).join('');
  el.innerHTML=`<div class="card"><div class="section-head"><div><h2>Equipment &amp; Vehicles</h2><div class="muted">Add, edit and manage equipment, fleet vehicles and specialist stock in one place.</div></div><button onclick="${cat.add}">＋ Add</button></div><div class="equipment-category-buttons">${tabs}</div><div class="manage-grid"><div class="manage-card"><div class="manage-note">TOTAL ${esc(cat.label.replace(/[^A-Za-z &]/g,'').toUpperCase())}</div><div class="manage-row-title">${total} ${isVehicle?'vehicles':'units'}</div></div><div class="manage-card"><div class="manage-note">AVAILABLE NOW</div><div class="manage-row-title">${available} ${isVehicle?'vehicles':'units'}</div></div></div><input id="eqSearch" placeholder="Search equipment, registration or category" value="${esc(q)}" oninput="renderEquipment()"></div>${cards||`<div class="card empty">No ${esc(cat.label.replace(/^[^ ]+ /,''))} found yet. Use + Add to create the first record.</div>`}`;
