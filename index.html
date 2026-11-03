@@ -1227,24 +1227,83 @@ function reportMatches(row){
  return true;
 }
 function reportDataSets(){
- const events=arr(data.events).filter(Boolean).map(j=>({id:j.id,name:j.name||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.finishDate||j.date||'',onsite:j.onsiteDate||j.buildDate||'',breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',crew:eventCrewText(j)||'',vehicles:eventVanText(j)||'',what3words:j.what3words||'',notes:j.notes||'',source:j}));
- const jobs=arr(data.jobs).filter(Boolean).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({id:j.id,name:j.name||j.title||'',customer:j.customer||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.date||'',onsite:j.onsiteDate||'',breakdown:j.breakdownDate||'',status:j.status||'',crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),what3words:j.what3words||'',notes:j.notes||'',source:j}));
- const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id,'Job Name':j.name,Customer:j.customer,Venue:j.venue,'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
- const stockRows=[];
- ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>arr(data[key]).forEach(item=>arr(item.allocations).forEach(a=>{
-   const e=events.find(x=>String(x.id)===String(a.jobId)||String(x.source.avJobId||'')===String(a.jobId));
-   const j=jobs.find(x=>String(x.id)===String(a.jobId));const p=arr(data.portalooJobs).find(x=>String(x.id)===String(a.jobId));
-   if(!e&&!j&&!p)return;
-   stockRows.push({'Job Name':e?.name||j?.name||p?.name||'','Job ID':a.jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||key,'Quantity':Number(a.qty)||1,'Allocated Date':reportDate(a.date||e?.start||j?.start||p?.startDate),'Returned':a.returned===true?'Yes':a.returned===false?'No':'Not recorded'});
+ const errors=[];
+ const safe=(label,fn)=>{try{const v=fn();return Array.isArray(v)?v:[]}catch(e){errors.push(label+': '+(e&&e.message?e.message:String(e)));console.error('Reports data source failed:',label,e);return [];}};
+ const list=v=>Array.isArray(v)?v.filter(Boolean):[];
+ const events=safe('Jobs/events',()=>list(data.events).map(j=>({
+  id:j.id,name:j.name||j.title||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',
+  start:j.date||j.startDate||j.start||'',end:j.endDate||j.finishDate||j.end||j.date||'',
+  onsite:j.onsiteDate||j.buildDate||j.setupDate||'',breakdown:j.breakdownDate||j.derigDate||'',
+  status:j.status||'',crew:(()=>{try{return eventCrewText(j)}catch(e){return list(j.crew).join(', ')}})(),
+  vehicles:(()=>{try{return eventVanText(j)}catch(e){return list(j.vehicles).join(', ')}})(),
+  what3words:j.what3words||'',notes:j.notes||'',source:j
  })));
- arr(['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].flatMap(key=>arr(data[key]))).forEach(item=>{
-   const history=arr(item.usageHistory||item.usage);
-   history.forEach(u=>{const jobId=u.jobId||u.id;const event=events.find(x=>String(x.id)===String(jobId)||String(x.source.avJobId||'')===String(jobId));const job=jobs.find(x=>String(x.id)===String(jobId));if(!event&&!job)return;stockRows.push({'Job Name':event?.name||job?.name||u.jobName||'','Job ID':jobId,'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'','Category':item.category||'Equipment','Quantity':Number(u.qty||u.quantity)||1,'Allocated Date':reportDate(u.date||u.at||event?.start||job?.start),'Returned':u.returned===true?'Yes':u.returned===false?'No':'Not recorded'});});
+ const jobs=safe('Jobs records',()=>list(data.jobs).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({
+  id:j.id,name:j.name||j.title||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',
+  start:j.date||j.startDate||j.start||'',end:j.endDate||j.date||j.end||'',onsite:j.onsiteDate||j.buildDate||'',
+  breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',
+  crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),
+  what3words:j.what3words||'',notes:j.notes||'',source:j
+ })));
+ const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id||'','Job Name':j.name,Customer:j.customer,Venue:j.venue,
+  'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),
+  'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
+ const stockRows=[];
+ safe('Stock allocations',()=>{
+  ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>list(data[key]).forEach(item=>{
+   list(item.allocations).forEach(a=>{
+    const e=events.find(x=>String(x.id)===String(a.jobId)||String(x.source.avJobId||'')===String(a.jobId));
+    const j=jobs.find(x=>String(x.id)===String(a.jobId));
+    const p=list(data.portalooJobs).find(x=>String(x.id)===String(a.jobId));
+    if(!e&&!j&&!p)return;
+    stockRows.push({'Job Name':e?.name||j?.name||p?.name||a.jobName||'','Job ID':a.jobId||'',
+     'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'',
+     Category:item.category||key,Quantity:Number(a.qty||a.quantity)||1,
+     'Allocated Date':reportDate(a.date||e?.start||j?.start||p?.startDate),
+     Returned:a.returned===true?'Yes':a.returned===false?'No':'Not recorded'});
+   });
+  }));
+ });
+ safe('Stock usage history',()=>{
+  ['items','portalooEquipment','furnitureProps','powerEquipment','marqueeEquipment'].forEach(key=>list(data[key]).forEach(item=>{
+   list(item.usageHistory||item.usage).forEach(u=>{
+    const jobId=u.jobId||u.id;
+    const e=events.find(x=>String(x.id)===String(jobId)||String(x.source.avJobId||'')===String(jobId));
+    const j=jobs.find(x=>String(x.id)===String(jobId));if(!e&&!j)return;
+    stockRows.push({'Job Name':e?.name||j?.name||u.jobName||'','Job ID':jobId||'',
+     'Stock Item':item.name||item.title||'','Asset Number':item.asset||item.assetNumber||'',
+     Category:item.category||key,Quantity:Number(u.qty||u.quantity)||1,
+     'Allocated Date':reportDate(u.date||u.at||e?.start||j?.start),
+     Returned:u.returned===true?'Yes':u.returned===false?'No':'Not recorded'});
+   });
+  }));
  });
  const crewRows=jobRows.map(r=>({'Job Name':r['Job Name'],Customer:r.Customer,Crew:r.Crew,Vehicles:r.Vehicles,Status:r.Status}));
- const hires=arr(ensureV51().hireVehicles).filter(Boolean).map(v=>({'Booking ID':v.id,Vehicle:v.vehicleName||'',Registration:v.registration||'',Customer:v.customer||'','Hire Type':reportHireType(v),'Hire Start':reportDate(v.start),'Hire End':reportDate(v.end),'Actual Return Date':v.returnedAt?reportDate(v.returnedAt):'','Hire Status':vehicleStatus(v),Status:vehicleStatus(v),'Raw Booking Status':v.status||'',Area:v.area||'',Notes:v.notes||''}));
- const portaloo=arr(data.portalooJobs).filter(Boolean).map(j=>({'Job ID':j.id,'Job Name':j.name||'',Customer:j.customer||j.client||'',Location:j.location||j.siteAddress||'',What3words:j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,'Total Units':portalooUnitTotal(j),'Status':j.status||'','Next Service':reportDate(portalooServiceDueDate(j)),Notes:j.notes||''}));
- const portalooService=arr(data.portalooJobs).filter(Boolean).flatMap(j=>arr(j.serviceHistory||j.services).filter(Boolean).map(s=>({'Portaloo Job':j.name||'',Customer:j.customer||'','Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'',Notes:s.notes||''})));
+ const hires=safe('Hire van records',()=>{
+  const hv=(data.v51&&data.v51.hireVehicles)||[];
+  return list(hv).map(v=>({
+   'Booking ID':v.id||'',Vehicle:v.vehicleName||v.vanName||v.name||'',Registration:v.registration||v.reg||'',
+   Customer:v.customer||v.customerName||'','Hire Type':reportHireType(v),
+   'Hire Start':reportDate(v.start||v.startDate),'Hire End':reportDate(v.end||v.endDate),
+   'Actual Return Date':reportDate(v.returnedAt||v.actualReturnDate||v.returnDate),
+   'Hire Status':(()=>{try{return vehicleStatus(v)}catch(e){return v.returned?'Returned':v.status||'Unknown'}})(),
+   Status:v.status||'',Area:v.area||v.hireType||v.locationType||'',Notes:v.notes||''
+  }));
+ });
+ const portaloo=safe('Portaloo hire records',()=>list(data.portalooJobs).map(j=>({
+  'Job ID':j.id||'','Job Name':j.name||j.title||'',Customer:j.customer||j.client||'',
+  Location:j.location||j.siteAddress||j.address||'',What3words:j.what3words||'',
+  'Delivery Date':reportDate(j.startDate||j.date||j.start),'Collection Date':reportDate(j.endDate||j.returnDate||j.end),
+  'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,
+  'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,
+  'Total Units':(()=>{try{return portalooUnitTotal(j)}catch(e){return (Number(j.unit1)||0)+(Number(j.unit2)||0)+(Number(j.unit3)||0)}})(),
+  Status:j.status||'','Next Service':(()=>{try{return reportDate(portalooServiceDueDate(j))}catch(e){return reportDate(j.nextServiceDate)}})(),Notes:j.notes||''
+ })));
+ const portalooService=safe('Portaloo service history',()=>list(data.portalooJobs).flatMap(j=>list(j.serviceHistory||j.services).map(x=>({
+  'Portaloo Job':j.name||j.title||'',Customer:j.customer||'','Service Date':reportDate(x.date||x.serviceDate),
+  'Service Type':x.type||x.description||'',Notes:x.notes||''
+ }))));
+ window._reportDataErrors=errors;
  return {jobs:jobRows,stock:stockRows,crew:crewRows,hires,portaloo,portalooService};
 }
 function reportFilterRows(rows){return rows.filter(reportMatches);}
@@ -1263,7 +1322,7 @@ function renderReportsData(){
  #reportsData .report-export{width:100%;margin-top:10px}
  @media(max-width:650px){#reportsData .report-grid{grid-template-columns:1fr}#reportsData .report-filters{grid-template-columns:1fr 1fr}}
  </style>
- <div class="report-hero"><h2 style="margin:0 0 6px">📊 Reports &amp; Data</h2><div class="muted">Search, filter and export operational history to Excel. Exports never change live records.</div></div>
+ <div class="report-hero"><h2 style="margin:0 0 6px">📊 Reports &amp; Data</h2><div class="muted">Search, filter and export operational history to Excel. Exports never change live records.</div></div><div id="reportSourceDiagnostics" class="small muted" style="margin:-4px 0 12px"></div>
  <div class="card"><h3 style="margin-top:0">Filter records</h3><div class="report-filters">
  <label>Search<input id="reportSearch" value="${esc(f.search)}" placeholder="Job, customer, vehicle…" oninput="updateReportFilter('search',this.value)"></label>
  <label>From date<input id="reportFrom" type="date" value="${esc(f.from)}" onchange="updateReportFilter('from',this.value)"></label>
@@ -1272,7 +1331,8 @@ function renderReportsData(){
  <div class="actions"><button class="secondary" onclick="resetReportFilters()">Clear filters</button><span class="small muted">Date filters use the record start/event date.</span></div></div>
  <div class="report-grid">${cards.map(([key,icon,title,desc])=>`<div class="report-tile"><div style="font-size:26px">${icon}</div><h3 style="margin:6px 0">${title}</h3><div class="small muted">${desc}</div><div style="font-size:24px;font-weight:800;margin-top:12px">${count(key)} <span class="small muted">records</span></div><button class="report-export" onclick="exportReport('${key}')">⬇ Export ${title} Excel</button></div>`).join('')}</div>
  <div class="card"><h3 style="margin-top:0">Export preview</h3><div class="actions" style="flex-wrap:wrap">${cards.map(([k,ic,t])=>`<button class="secondary" onclick="setReportPreview('${k}')">${ic} ${t}</button>`).join('')}</div><div id="reportPreview"></div></div>`;
- const status=document.getElementById('reportStatus');if(status)status.value=f.status||'all';window._reportPreviewKey=window._reportPreviewKey||'jobs';renderReportPreview();
+ const status=document.getElementById('reportStatus');if(status)status.value=f.status||'all';window._reportPreviewKey=window._reportPreviewKey||'jobs';try{renderReportPreview();}catch(previewError){console.error('Report preview failed',previewError);const preview=document.getElementById('reportPreview');if(preview)preview.textContent='Preview unavailable: '+(previewError.message||String(previewError));}
+ const diag=document.getElementById('reportSourceDiagnostics');if(diag){const errs=window._reportDataErrors||[];diag.textContent=errs.length?'Some record groups could not be read: '+errs.join(' | '):'Live records loaded from this device/cloud sync.';}
 }
 window.updateReportFilter=function(k,v){window._reportsDataFilters[k]=v;renderReportsData();const input=document.getElementById(k==='search'?'reportSearch':k==='from'?'reportFrom':k==='to'?'reportTo':'reportStatus');if(input&&k==='search'){input.focus();input.setSelectionRange(input.value.length,input.value.length);}};
 window.resetReportFilters=function(){window._reportsDataFilters={search:'',from:'',to:'',status:'all'};renderReportsData();};
@@ -1301,7 +1361,7 @@ function showPage(page){
  });
  if(page==='scanner')startScan();else stopScan();
  render();
- if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem reading the records. Please refresh and try again.</p><p class="muted">The live records have not been changed.</p></div>';}}
+ if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>Reports could not finish loading: '+safeText(err&&err.message?err.message:String(err))+'</p><p class="muted">No live records have been changed. Please share this error if it persists.</p></div>';}}
  if(page==='windForecast')loadWindForecast();
  window.scrollTo({top:0,behavior:'smooth'});
 }
