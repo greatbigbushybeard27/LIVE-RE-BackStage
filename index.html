@@ -924,7 +924,33 @@ function cloudAuthModal(){
  }
  openModal('<div class="cloud-modal-head"><div><h2 style="margin:0">☁️ Regency Cloud</h2><div class="cloud-modal-status"><span class="cloud-dot offline"></span>Not connected</div></div></div><p class="muted">Sign in to sync Regency company data between devices.</p><label>Email</label><input id="cloud_email" type="email" autocomplete="email" placeholder="crew@regencyevents.gg"><label>Password</label><input id="cloud_password" type="password" autocomplete="current-password" placeholder="Password"><div class="actions"><button onclick="cloudSignIn()">Log in</button><button class="secondary" onclick="cloudSignUp()">Create account</button></div><div id="cloud_auth_msg" class="small" style="margin-top:10px"></div>');
 }
-async function cloudSignIn(){const email=v('cloud_email'),password=v('cloud_password');if(!email||!password)return alert('Enter email and password.');const {error}=await supabaseClient.auth.signInWithPassword({email,password});const m=document.getElementById('cloud_auth_msg');if(error){if(m)m.textContent=error.message;return}closeModal();}
+async function cloudSignIn(){
+ const email=v('cloud_email'),password=v('cloud_password'),m=document.getElementById('cloud_auth_msg');
+ const buttons=document.querySelectorAll('#modal button');
+ const loginButton=[...buttons].find(b=>(b.textContent||'').trim()==='Log in');
+ const show=(message,kind='error')=>{if(m){m.textContent=message;m.style.color=kind==='success'?'#9be7b5':'#ff9a9a';m.style.display='block'}};
+ if(!email||!password){show('Enter your email address and password.');return}
+ if(!supabaseClient?.auth){show('Supabase client is unavailable. Check your internet connection and reload Backstage.');return}
+ if(loginButton){loginButton.disabled=true;loginButton.textContent='Connecting…'}
+ show('Contacting Regency Cloud…','success');
+ try{
+   const {data:result,error}=await supabaseClient.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   if(!result?.session){show('Supabase did not return a login session. Please try again.');return}
+   cloudSession=result.session;
+   setCloudHeader();
+   show('Login successful. Connecting to shared company data…','success');
+   try{await ensureCloudCrew();subscribeCloud();await cloudLoad();}
+   catch(syncError){console.error('Cloud login succeeded but initial sync failed',syncError);setCloudSyncState('error',syncError?.message||String(syncError));show('Signed in, but cloud data could not sync: '+(syncError?.message||'Unknown sync error'))}
+   if(cloudSession){closeModal();setCloudHeader()}
+ }catch(error){
+   console.error('Regency Cloud login failed',error);
+   const message=error?.message||error?.error_description||String(error);
+   show('Login failed: '+message);
+ }finally{
+   if(loginButton&&document.body.contains(loginButton)){loginButton.disabled=false;loginButton.textContent='Log in'}
+ }
+}
 async function cloudSignUp(){const email=v('cloud_email'),password=v('cloud_password');if(!email||!password)return alert('Enter email and password.');if(password.length<6)return alert('Password must be at least 6 characters.');const name=prompt('Your name for the crew list:')||email.split('@')[0];const {data:res,error}=await supabaseClient.auth.signUp({email,password,options:{data:{display_name:name}}});const m=document.getElementById('cloud_auth_msg');if(error){if(m)m.textContent=error.message;return}if(res.session){closeModal();}else if(m)m.textContent='Account created. Check your email if confirmation is required, then log in.';}
 async function cloudLogout(){if(!supabaseClient)return;await supabaseClient.auth.signOut();localStorage.removeItem('regency_current_auth_user');setCloudHeader();render();}
 function cloudLoginRequired(){return !!cloudSession}
@@ -2843,7 +2869,7 @@ window.addEventListener('storage',()=>{ensureV51();hook()});
   function ensureForgotButton(){const msg=el('cloud_auth_msg'),email=el('cloud_email');if(!msg||!email)return false;if(el('cloud_forgot_password'))return true;const btn=document.createElement('button');btn.id='cloud_forgot_password';btn.type='button';btn.className='secondary';btn.textContent='Forgot password?';btn.style.marginTop='8px';btn.style.width='100%';btn.onclick=window.cloudForgotPassword;(msg.parentElement||msg).appendChild(btn);return true}
   function patchCloudLogin(){installRecovery();ensureForgotButton();if(typeof window.cloudAuthModal!=='function')return false;if(window.cloudAuthModal.__v524patched)return true;const original=window.cloudAuthModal;function patched(){original.apply(this,arguments);setTimeout(ensureForgotButton,20);setTimeout(ensureForgotButton,250)}patched.__v524patched=true;window.cloudAuthModal=patched;return true}
   function closeUnexpectedStartupLogin(){if(typeof window.cloudSession!=='undefined'&&window.cloudSession)return;if(el('cloud_email')&&typeof closeModal==='function'){const active=document.activeElement;if(active!==el('cloud_email')&&active!==el('cloud_password'))closeModal()}}
-  function boot(){installRecovery();const observer=new MutationObserver(()=>{ensureForgotButton()});observer.observe(document.body,{childList:true,subtree:true});let tries=0;const t=setInterval(()=>{tries++;patchCloudLogin();if(tries>160)clearInterval(t)},250);setTimeout(closeUnexpectedStartupLogin,1200);setTimeout(ensureForgotButton,1500)}
+  function boot(){installRecovery();const observer=new MutationObserver(()=>{ensureForgotButton()});observer.observe(document.body,{childList:true,subtree:true});let tries=0;const t=setInterval(()=>{tries++;patchCloudLogin();if(tries>160)clearInterval(t)},250);/* Login popup is user-controlled; never auto-close it during startup. */setTimeout(ensureForgotButton,1500)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
 
