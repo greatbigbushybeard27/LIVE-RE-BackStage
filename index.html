@@ -3238,7 +3238,7 @@ async function renderRegularCrewDocuments(){
   const checks=(field,opts)=>opts.map((v,i)=>`<label class="crew-cap-option"><input type="checkbox" ${u[field].includes(v)?'checked':''} onchange="saveCrewCapability('${ce(u.id)}','${field}','${ce(v)}',this.checked)"><span>${ce(v)}</span></label>`).join('');
   return `<div class="card crew-record-card"><h3>${ce(u.name)} <span class="badge">${ce(roleLabel(u.role))}</span></h3>
   <p class="muted">Health & Safety acknowledgements recorded in tracker: ${ackCount}</p>
-  <div class="crew-capabilities"><h3>👷 Crew type</h3><label class="crew-cap-option"><span>Employment category</span><select class="crew-type-select" onchange="setCrewEmploymentType('${ce(u.id)}',this.value)"><option value="Regular Crew" ${((u.staffType||'Regular Crew')==='Regular Crew'||u.staffType==='Full-time')?'selected':''}>Regular Crew</option><option value="Part Time Crew" ${((u.staffType||'')==='Part Time Crew'||u.staffType==='Casual')?'selected':''}>Part Time Crew</option></select></label></div>
+  <div class="crew-capabilities"><h3>👷 Crew type</h3><label class="crew-cap-option"><span>Employment category</span><select class="crew-type-select" onchange="setCrewEmploymentType('${ce(u.id)}',this.value)"><option value="Regular Crew" ${staffType(u)==='Regular Crew'?'selected':''}>Regular Crew</option><option value="Part Time Crew" ${staffType(u)==='Part Time Crew'?'selected':''}>Part Time Crew</option></select></label></div>
   <div class="crew-capabilities"><h3>🧰 Skills &amp; Capabilities</h3><p class="muted small">Director-managed crew roles and qualifications. Certificate uploads and expiry dates remain in the existing document records below.</p>
   <b>Crew roles</b><div class="crew-cap-grid">${checks('crewRoles',roleOptions)}</div>
   <b>Additional qualifications</b><div class="crew-cap-grid">${checks('crewQualifications',qualOptions)}</div></div>
@@ -3493,7 +3493,7 @@ window.setCrewEmploymentType=function(userId,value){
  if(!manager())return alert('Director access required.');
  if(!['Regular Crew','Part Time Crew'].includes(value))return;
  const u=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u)return;
- u.staffType=value;u.employmentType=value;save();
+ u.staffType=value;u.employmentType=value;u.employmentCategory=value;u.crewType=value;save();
 };
 window.saveCrewCapability=function(userId,field,value,checked){
  if(!manager())return alert('Director access required.');
@@ -3589,7 +3589,7 @@ window.renderStaffCalendar=function(){
  const displayName=p=>{const parts=String(p.name||'Crew').trim().split(/\s+/),first=parts[0]||'Crew';return firstNames[first.toLowerCase()]>1&&parts.length>1?first+' '+parts[1][0].toUpperCase():first};
  const rowsHtml=visible.map(person=>{
   const type=staffType(person),personEntries=entries.filter(e=>String(e.userId)===String(person.id));
-  const squares=dates.map(d=>{if(!d)return '<div class="sc-day-block blank"></div>';const k=dayKey(d),leave=personEntries.some(e=>e.kind!=='Shift'&&k>=e.startDate&&k<=e.endDate),shift=personEntries.some(e=>e.kind==='Shift'&&k>=e.startDate&&k<=e.endDate&&(e.confirmed===true||e.status==='Accepted'||(e.requestId&&requests.some(r=>String(r.id)===String(e.requestId)&&(r.applications||[]).some(a=>String(a.userId)===String(person.id)&&a.status==='Accepted'))))),regular=type==='Regular Crew'&&d.getDay()>0&&d.getDay()<6;
+  const squares=dates.map(d=>{if(!d)return '<div class="sc-day-block blank"></div>';const k=dayKey(d),leave=personEntries.some(e=>e.kind!=='Shift'&&k>=e.startDate&&k<=e.endDate),shift=personEntries.some(e=>e.kind==='Shift'&&k>=e.startDate&&k<=e.endDate&&(e.confirmed===true||e.status==='Accepted')),regular=type==='Regular Crew'&&d.getDay()>0&&d.getDay()<6;
    const todayCol=k===dayKey(new Date()),status=leave?'away':(shift||regular)?'working':'empty';
    const note=data.staffCalendarNotes.find(n=>String(n.userId)===String(person.id)&&n.date===k);
    const legacyNote=personEntries.find(e=>k>=e.startDate&&k<=e.endDate&&e.note);
