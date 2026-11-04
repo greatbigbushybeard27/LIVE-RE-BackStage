@@ -1618,6 +1618,19 @@ function showPage(page){
  });
  if(page==='scanner')startScan();else stopScan();
  try{render();}catch(renderError){console.error('Shared render error',renderError);}
+ if(page==='crewManagement'){
+   const crewHost=document.getElementById('crewManagement');
+   if(crewHost){
+     try{
+       if(typeof renderCrewManagementPage!=='function')throw new Error('Crew Management renderer is unavailable');
+       renderCrewManagementPage();
+       if(!crewHost.innerHTML.trim())throw new Error('Crew Management renderer returned an empty page');
+     }catch(crewError){
+       console.error('Crew Management render failed',crewError);
+       crewHost.innerHTML='<div class="card"><h2>👥 Crew Management</h2><p>Crew Management could not load.</p><p class="muted">Diagnostic: '+String(crewError&&crewError.message||crewError||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\'crewManagement\')">Try again</button></div>';
+     }
+   }
+ }
  if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML=`<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem displaying the reports.</p><p class="muted">Your live records have not been changed.</p><details><summary>Technical details</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err?.message||String(err))}</pre></details><button onclick="showPage('reportsData')">Try again</button></div>`;}}
  if(page==='vehicleMaintenance'){
    const maintenanceEl=document.getElementById('vehicleMaintenance');
