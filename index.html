@@ -1347,13 +1347,13 @@ function reportDate(v){return v?String(v).slice(0,10):'';}
 function reportHireType(v){const raw=v.area??v.hireType??v.locationType??v.hireLocation??'';const a=String(raw).toLowerCase().replace(/[ _]/g,'-');if(a.includes('off')||a==='uk'||a==='europe'||a==='off-island')return 'Off-Island';if(a==='local'||a.includes('on')||a==='guernsey'||a==='on-island')return 'On-Island';return 'Not recorded';}
 function reportMatches(row){
  const f=window._reportsDataFilters||{},q=String(f.search||'').trim().toLowerCase();
- if(q&&!Object.values(row).join(' ').toLowerCase().includes(q))return false;
+ if(q&&!Object.values(row||{}).map(v=>{try{return typeof v==='object'?JSON.stringify(v):String(v??'')}catch(_){return ''}}).join(' ').toLowerCase().includes(q))return false;
  const date=reportDate(row['Start Date']||row['Event Date']||row['Delivery Date']||row['Hire Start']);
  if(f.from&&date&&date<f.from)return false;if(f.to&&date&&date>f.to)return false;
  if(f.status&&f.status!=='all'&&!String(row.Status||'').toLowerCase().includes(String(f.status).toLowerCase()))return false;
  return true;
 }
-function reportDataSets(){
+function reportDataSetsUnsafe(){
  const events=arr(data.events).filter(Boolean).map(j=>({id:j.id,name:j.name||'',customer:j.customer||j.client||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.finishDate||j.date||'',onsite:j.onsiteDate||j.buildDate||'',breakdown:j.breakdownDate||j.derigDate||'',status:j.status||'',crew:eventCrewText(j)||'',vehicles:eventVanText(j)||'',what3words:j.what3words||'',notes:j.notes||'',source:j}));
  const jobs=arr(data.jobs).filter(Boolean).filter(j=>!events.some(e=>String(e.id)===String(j.id))).map(j=>({id:j.id,name:j.name||j.title||'',customer:j.customer||'',venue:j.venue||j.location||'',start:j.date||j.startDate||'',end:j.endDate||j.date||'',onsite:j.onsiteDate||'',breakdown:j.breakdownDate||'',status:j.status||'',crew:Array.isArray(j.crew)?j.crew.join(', '):(j.crew||''),vehicles:Array.isArray(j.vehicles)?j.vehicles.join(', '):(j.vehicles||''),what3words:j.what3words||'',notes:j.notes||'',source:j}));
  const jobRows=events.concat(jobs).map(j=>({'Job ID':j.id,'Job Name':j.name,Customer:j.customer,Venue:j.venue,'Event Date':reportDate(j.start),'End Date':reportDate(j.end),'Onsite Date':reportDate(j.onsite),'Breakdown Date':reportDate(j.breakdown),Status:j.status,Crew:j.crew,Vehicles:j.vehicles,What3words:j.what3words,Notes:j.notes}));
@@ -1373,6 +1373,39 @@ function reportDataSets(){
  const portaloo=arr(data.portalooJobs).filter(Boolean).map(j=>({'Job ID':j.id,'Job Name':j.name||'',Customer:j.customer||j.client||'',Location:j.location||j.siteAddress||'',What3words:j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No','Unit 1 Quantity':Number(j.unit1)||0,'Unit 2 Quantity':Number(j.unit2)||0,'Unit 3 Quantity':Number(j.unit3)||0,'Total Units':portalooUnitTotal(j),'Status':j.status||'','Next Service':reportDate(portalooServiceDueDate(j)),Notes:j.notes||''}));
  const portalooService=arr(data.portalooJobs).filter(Boolean).flatMap(j=>arr(j.serviceHistory||j.services).filter(Boolean).map(s=>({'Portaloo Job':j.name||'',Customer:j.customer||'','Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'',Notes:s.notes||''})));
  return {jobs:jobRows,stock:stockRows,crew:crewRows,hires,portaloo,portalooService};
+}
+
+function reportDataSets(){
+ const arrSafe=v=>Array.isArray(v)?v:[];
+ const safe=(name,fn)=>{try{return fn()||[]}catch(e){console.error('Reports group '+name+' failed:',e);return []}};
+ const jobs=safe('jobs',()=>arrSafe(data.events).concat(arrSafe(data.jobs)).filter(Boolean).map(j=>({
+  'Job ID':j.id??'','Job Name':j.name||j.title||'','Customer':typeof j.customer==='object'?(j.customer.company||j.customer.name||''):j.customer||j.client||'',
+  'Venue':j.venue||j.location||'','Event Date':reportDate(j.date||j.startDate),'End Date':reportDate(j.endDate||j.finishDate||j.date),
+  'Onsite Date':reportDate(j.onsiteDate||j.buildDate),'Breakdown Date':reportDate(j.breakdownDate||j.derigDate),
+  'Status':j.status||'','Crew':Array.isArray(j.userIds)?j.userIds.map(id=>(arrSafe(data.users).find(u=>String(u.id)===String(id))||{}).name||'').filter(Boolean).join(', '):(Array.isArray(j.crew)?j.crew.join(', '):j.crew||''),
+  'Vehicles':Array.isArray(j.vanIds)?j.vanIds.map(id=>(arrSafe(data.vans).find(v=>String(v.id)===String(id))||{}).name||'').filter(Boolean).join(', '):(Array.isArray(j.vehicles)?j.vehicles.join(', '):j.vehicles||''),
+  'What3words':j.what3words||'','Notes':j.notes||''
+ })));
+ const hires=safe('hire vans',()=>arrSafe(ensureV51().hireVehicles).filter(Boolean).map(v=>({
+  'Booking ID':v.id??'','Vehicle':v.vehicleName||v.name||'','Registration':v.registration||'',
+  'Customer':v.customer||'','Hire Type':reportHireType(v),'Hire Start':reportDate(v.start),'Hire End':reportDate(v.end),
+  'Actual Return Date':v.returnedAt?reportDate(v.returnedAt):'','Hire Status':typeof vehicleStatus==='function'?vehicleStatus(v):(v.status||''),
+  'Status':typeof vehicleStatus==='function'?vehicleStatus(v):(v.status||''),'Area':v.area||'','Notes':v.notes||''
+ })));
+ const portaloo=safe('portaloo',()=>arrSafe(data.portalooJobs).filter(Boolean).map(j=>({
+  'Job ID':j.id??'','Job Name':j.name||'','Customer':typeof j.customer==='object'?(j.customer.company||j.customer.name||''):j.customer||j.client||'',
+  'Location':j.location||j.siteAddress||'','What3words':j.what3words||'','Delivery Date':reportDate(j.startDate||j.date),
+  'Collection Date':reportDate(j.endDate||j.returnDate),'Rolling Hire':j.rolling?'Yes':'No',
+  'Total Units':typeof portalooUnitTotal==='function'?portalooUnitTotal(j):0,'Status':j.status||'',
+  'Next Service':typeof portalooServiceDueDate==='function'?reportDate(portalooServiceDueDate(j)):'','Notes':j.notes||''
+ })));
+ const portalooService=safe('portaloo service history',()=>arrSafe(data.portalooJobs).flatMap(j=>arrSafe(j?.serviceHistory||j?.services).map(s=>({
+  'Portaloo Job':j.name||'','Customer':typeof j.customer==='object'?(j.customer.company||j.customer.name||''):j.customer||'',
+  'Service Date':reportDate(s.date||s.serviceDate),'Service Type':s.type||s.description||'','Notes':s.notes||''
+ }))));
+ const stock=safe('stock usage',()=>reportDataSetsUnsafe().stock||[]);
+ const crew=jobs.map(r=>({'Job Name':r['Job Name'],Customer:r.Customer,Crew:r.Crew,Vehicles:r.Vehicles,Status:r.Status}));
+ return {jobs,stock,crew,hires,portaloo,portalooService};
 }
 function reportFilterRows(rows){return rows.filter(reportMatches);}
 function renderReportsData(){
@@ -1585,7 +1618,7 @@ function showPage(page){
  });
  if(page==='scanner')startScan();else stopScan();
  try{render();}catch(renderError){console.error('Shared render error',renderError);}
- if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML='<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem reading the records. Please refresh and try again.</p><p class="muted">The live records have not been changed.</p></div>';}}
+ if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML=`<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem displaying the reports.</p><p class="muted">Your live records have not been changed.</p><details><summary>Technical details</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err?.message||String(err))}</pre></details><button onclick="showPage('reportsData')">Try again</button></div>`;}}
  if(page==='vehicleMaintenance'){
    const maintenanceEl=document.getElementById('vehicleMaintenance');
    if(maintenanceEl)maintenanceEl.classList.remove('hidden');
@@ -3520,7 +3553,7 @@ let staffCalendarView='week',staffCalendarFilter='All Staff',staffCalendarDate=n
 staffCalendarDate.setHours(12,0,0,0);
 function fmtDate(d){return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
 function dayKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-function staffType(u){return (u.staffType==='Full-time'||!u.staffType)?'Regular Crew':u.staffType==='Casual'?'Part Time Crew':u.staffType}
+function staffType(u){const raw=String(u?.staffType||u?.employmentType||'Regular Crew').trim().toLowerCase().replace(/[_-]+/g,' ');return ['casual','part time','parttime','part time crew'].includes(raw)?'Part Time Crew':'Regular Crew'}
 window.setStaffCalendarView=function(v){if(['day','week','month'].includes(v)){staffCalendarView=v;renderStaffCalendar()}};
 window.setStaffCalendarFilter=function(v){staffCalendarFilter=v;renderStaffCalendar()};
 window.renderStaffCalendar=function(){
@@ -3581,7 +3614,7 @@ window.renderStaffCalendar=function(){
  #staffCalendar .sc-legend i{display:inline-block;width:14px;height:14px;border-radius:3px}
  #staffCalendar .sr-card{margin:10px 0}#staffCalendar .sr-app{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--regency-border)}
  </style>
- <div class="card"><div class="sc-toolbar"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Who's in, who's away and confirmed shifts.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${title}</b><button class="secondary" onclick="staffCalendarToday()">Today</button><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
+ <div class="card"><div class="sc-toolbar"><div><h2 style="margin:0">📅 Staff Calendar</h2><p class="muted">Who's in, who's away and confirmed shifts.</p></div><div class="actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${title}</b><button class="secondary" onclick="staffCalMove(1)">›</button><button class="secondary" onclick="staffCalendarToday()">Today</button></div></div>
  ${isMgr?`<div class="sc-filter">${['All Staff','Regular Crew','Part Time Crew'].map(v=>`<button class="${staffCalendarFilter===v?'active':'secondary'}" onclick="setStaffCalendarFilter('${v}')">${v}</button>`).join('')}</div>`:''}
  <div class="sc-filter">${['day','week','month'].map(v=>`<button class="${staffCalendarView===v?'active':'secondary'}" onclick="setStaffCalendarView('${v}')">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}</div>
  <div class="sc-calendar-scroll"><div class="sc-calendar-grid"><div class="sc-day-head" style="--sc-days:${staffCalendarView==='month'?7:days}"><span></span><div class="sc-day-labels">${(staffCalendarView==='month'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:dates).map(d=>{const isToday=typeof d!=='string'&&d&&dayKey(d)===dayKey(new Date());return `<span class="${isToday?'today-col':''}">${typeof d==='string'?d:d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</span>`}).join('')}</div></div>
