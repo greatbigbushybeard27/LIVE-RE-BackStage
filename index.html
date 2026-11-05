@@ -776,6 +776,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 <script>
 const KEY='avtracker_v1';
 let data;
+function ensureWageSettings(u){if(!u)return;u.wageSettings=u.wageSettings||{};const w=u.wageSettings;w.standardRate=Number.isFinite(Number(w.standardRate))&&Number(w.standardRate)>0?Number(w.standardRate):15;w.enhanced1Rate=Number.isFinite(Number(w.enhanced1Rate))&&Number(w.enhanced1Rate)>0?Number(w.enhanced1Rate):w.standardRate;w.enhanced2Rate=Number.isFinite(Number(w.enhanced2Rate))&&Number(w.enhanced2Rate)>0?Number(w.enhanced2Rate):w.standardRate;w.taxPercent=Math.max(0,Math.min(100,Number.isFinite(Number(w.taxPercent))?Number(w.taxPercent):0));return w}
 
 // Shared V51/fleet helpers live in the primary app scope because the main renderers
 // call them before the optional V51 feature layer is evaluated.
