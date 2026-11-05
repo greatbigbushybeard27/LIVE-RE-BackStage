@@ -1618,6 +1618,19 @@ function showPage(page){
  });
  if(page==='scanner')startScan();else stopScan();
  try{render();}catch(renderError){console.error('Shared render error',renderError);}
+ if(page==='portaloo'){
+   const portalooHost=document.getElementById('portaloo');
+   if(portalooHost){
+     try{
+       if(typeof renderPortaloo!=='function')throw new Error('Portaloo page renderer is unavailable');
+       renderPortaloo();
+       if(!portalooHost.innerHTML.trim())throw new Error('Portaloo renderer returned an empty page');
+     }catch(portalooError){
+       console.error('Portaloo render failed',portalooError);
+       portalooHost.innerHTML='<div class="card"><h2>🚻 Portaloo Jobs</h2><p>Portaloo Jobs could not load.</p><p class="muted">Diagnostic: '+String(portalooError&&portalooError.message||portalooError||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\'portaloo\')">Try again</button></div>';
+     }
+   }
+ }
  if(page==='crewManagement'){
    const crewHost=document.getElementById('crewManagement');
    if(crewHost){
