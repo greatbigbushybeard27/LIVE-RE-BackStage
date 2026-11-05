@@ -776,6 +776,44 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 <script>
 const KEY='avtracker_v1';
 let data;
+
+// Shared V51/fleet helpers live in the primary app scope because the main renderers
+// call them before the optional V51 feature layer is evaluated.
+function ensureV51(){
+ data.v51=data.v51||{};
+ data.v51.documents=Array.isArray(data.v51.documents)?data.v51.documents:[];
+ data.v51.hireVehicles=Array.isArray(data.v51.hireVehicles)?data.v51.hireVehicles:[];
+ data.v51.vehicleFiles=Array.isArray(data.v51.vehicleFiles)?data.v51.vehicleFiles:[];
+ return data.v51;
+}
+function ensureBackstageReferences(){
+ let changed=false;
+ const assign=(records,prefix)=>{
+  const list=Array.isArray(records)?records:[];
+  let max=0;
+  list.forEach(x=>{const m=String(x?.displayRef||'').match(new RegExp('^'+prefix+'-(\\d+)$'));if(m)max=Math.max(max,Number(m[1])||0)});
+  list.forEach(x=>{if(x&&!x.displayRef){changed=true;max++;x.displayRef=prefix+'-'+String(max).padStart(3,'0')}});
+ };
+ assign(data.events,'EV');
+ assign(data.portalooJobs,'PJ');
+ assign(ensureV51().hireVehicles,'VH');
+ if(changed&&typeof save==='function')save();
+ return true;
+}
+function backstageRef(record,prefix){
+ ensureBackstageReferences();
+ return record?.displayRef||'';
+}
+function hireWasCollected(v){return !!(v&&(v.collectedAt||v.onHireAt||v.status==='On Hire'))}
+function vehicleStatus(v){
+ const today=new Date().toLocaleDateString('en-CA');
+ const to=v.end||'';
+ if(v.returned||['Checked & Returned','Complete','Closed'].includes(v.status)){if(to&&today>to)return 'Closed';return 'Checked & Returned';}
+ if(v.status==='Cancelled'||v.status==='Canceled')return 'Cancelled';
+ if(hireWasCollected(v)){if(to&&today>to)return 'Overdue';return 'On Hire'}
+ return 'Booked';
+}
+
 function ensureNotifications(){data.notifications=Array.isArray(data.notifications)?data.notifications:[];}
 function notificationKey(key){ensureNotifications();return data.notifications.some(n=>n.key===key);}
 function addNotification(type,title,message,key,opts={}){ensureNotifications();if(notificationKey(key))return false;data.notifications.unshift({id:makeId('note'),key,type,title,message,at:new Date().toISOString(),read:false});data.notifications=data.notifications.slice(0,200);save();if(opts.phone&&'Notification' in window&&Notification.permission==='granted'){try{new Notification(title,{body:message,icon:'regency-app-logo.png',tag:key})}catch(e){}}return true;}
@@ -796,7 +834,6 @@ function checkWindNotification(kmh,gust){const k=Number(kmh)||0,g=Number(gust)||
 try{data=JSON.parse(localStorage.getItem(KEY)||'{"items":[],"jobs":[],"history":[],"users":[],"vans":[],"hours":[]}')}catch(e){data={items:[],jobs:[],history:[],users:[],vans:[],hours:[]}}
 data.hours=Array.isArray(data.hours)?data.hours:[];data.tasks=Array.isArray(data.tasks)?data.tasks:[];
 (data.users||[]).forEach(u=>{u.holidayAllowance=Math.max(0,Math.floor(Number(u.holidayAllowance)||0));u.holidayAllowanceYear=Number(u.holidayAllowanceYear)||new Date().getFullYear();u.avatarColor=u.avatarColor||'#5a341d';u.avatar=u.avatar||{skin:'#f1c7a5',hairStyle:'short',hairColor:u.avatarColor,beardStyle:'full',beardColor:u.avatarColor,extra:'none'};u.avatar.skin=u.avatar.skin||'#f1c7a5';u.avatar.hairStyle=u.avatar.hairStyle||'short';u.avatar.hairColor=u.avatar.hairColor||u.avatarColor;u.avatar.beardStyle=u.avatar.beardStyle||'full';u.avatar.beardColor=u.avatar.beardColor||u.avatar.hairColor;u.avatar.extra=u.avatar.extra||'none';});
-function ensureWageSettings(u){if(!u)return;u.wageSettings=u.wageSettings||{};const w=u.wageSettings;w.standardRate=Number.isFinite(Number(w.standardRate))&&Number(w.standardRate)>0?Number(w.standardRate):15;w.enhanced1Rate=Number.isFinite(Number(w.enhanced1Rate))&&Number(w.enhanced1Rate)>0?Number(w.enhanced1Rate):w.standardRate;w.enhanced2Rate=Number.isFinite(Number(w.enhanced2Rate))&&Number(w.enhanced2Rate)>0?Number(w.enhanced2Rate):w.standardRate;w.taxPercent=Math.max(0,Math.min(100,Number.isFinite(Number(w.taxPercent))?Number(w.taxPercent):0));return w}
 (data.users||[]).forEach(ensureWageSettings);
 (data.hours||[]).forEach(h=>{if(!h.rateType)h.rateType='standard';if(h.rateSnapshot==null){const u=(data.users||[]).find(x=>x.id===h.userId);h.rateSnapshot=ensureWageSettings(u)?.[h.rateType==='enhanced1'?'enhanced1Rate':h.rateType==='enhanced2'?'enhanced2Rate':'standardRate']||15;}});
 data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];data.users=data.users||[];data.vans=data.vans||[];
@@ -1176,7 +1213,6 @@ function saveHourEntry(id){const u=currentUser();if(!u)return;const date=v('h_da
 
 function periodFromKey(key){const [start,end]=String(key||'').split('_');return start&&end?{start,end,key}:null}
 function previousSubmittedPeriods(u,currentKey){const map=new Map();(data.hours||[]).filter(x=>x.userId===u.id&&x.status==='Submitted').forEach(x=>{const p=payPeriodFor(x.date);if(p.key===currentKey)return;map.set(p.key,p)});return [...map.values()].sort((a,b)=>b.start.localeCompare(a.start))}
-function openTimesheetPeriod(key){const u=currentUser();if(!u)return;const p=periodFromKey(key);if(!p)return;returnToProfileOnClose=false;closeModal();showPage('hours');renderHoursPage(u,p,true)}
 function renderTimesheetPeriod(u,p,isPrevious=false){
  const rows=(data.hours||[]).filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
  const sum=paySummary(u,p),submitted=rows.length&&rows.every(x=>x.status==='Submitted'),days={};
@@ -1618,32 +1654,6 @@ function showPage(page){
  });
  if(page==='scanner')startScan();else stopScan();
  try{render();}catch(renderError){console.error('Shared render error',renderError);}
- if(page==='portaloo'){
-   const portalooHost=document.getElementById('portaloo');
-   if(portalooHost){
-     try{
-       if(typeof renderPortaloo!=='function')throw new Error('Portaloo page renderer is unavailable');
-       renderPortaloo();
-       if(!portalooHost.innerHTML.trim())throw new Error('Portaloo renderer returned an empty page');
-     }catch(portalooError){
-       console.error('Portaloo render failed',portalooError);
-       portalooHost.innerHTML='<div class="card"><h2>🚻 Portaloo Jobs</h2><p>Portaloo Jobs could not load.</p><p class="muted">Diagnostic: '+String(portalooError&&portalooError.message||portalooError||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\'portaloo\')">Try again</button></div>';
-     }
-   }
- }
- if(page==='crewManagement'){
-   const crewHost=document.getElementById('crewManagement');
-   if(crewHost){
-     try{
-       if(typeof renderCrewManagementPage!=='function')throw new Error('Crew Management renderer is unavailable');
-       renderCrewManagementPage();
-       if(!crewHost.innerHTML.trim())throw new Error('Crew Management renderer returned an empty page');
-     }catch(crewError){
-       console.error('Crew Management render failed',crewError);
-       crewHost.innerHTML='<div class="card"><h2>👥 Crew Management</h2><p>Crew Management could not load.</p><p class="muted">Diagnostic: '+String(crewError&&crewError.message||crewError||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\'crewManagement\')">Try again</button></div>';
-     }
-   }
- }
  if(page==='reportsData'){try{renderReportsData();}catch(err){console.error('Reports & Data render failed',err);const reportEl=document.getElementById('reportsData');if(reportEl)reportEl.innerHTML=`<div class="card"><h2>Reports &amp; Data</h2><p>There was a problem displaying the reports.</p><p class="muted">Your live records have not been changed.</p><details><summary>Technical details</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(err?.message||String(err))}</pre></details><button onclick="showPage('reportsData')">Try again</button></div>`;}}
  if(page==='vehicleMaintenance'){
    const maintenanceEl=document.getElementById('vehicleMaintenance');
@@ -1660,7 +1670,26 @@ function render(){data.hours=Array.isArray(data.hours)?data.hours:[];
 (data.users||[]).forEach(u=>{u.holidayAllowance=Math.max(0,Math.floor(Number(u.holidayAllowance)||0));u.holidayAllowanceYear=Number(u.holidayAllowanceYear)||new Date().getFullYear();u.avatarColor=u.avatarColor||'#5a341d';u.avatar=u.avatar||{skin:'#f1c7a5',hairStyle:'short',hairColor:u.avatarColor,beardStyle:'full',beardColor:u.avatarColor,extra:'none'};u.avatar.skin=u.avatar.skin||'#f1c7a5';u.avatar.hairStyle=u.avatar.hairStyle||'short';u.avatar.hairColor=u.avatar.hairColor||u.avatarColor;u.avatar.beardStyle=u.avatar.beardStyle||'full';u.avatar.beardColor=u.avatar.beardColor||u.avatar.hairColor;u.avatar.extra=u.avatar.extra||'none';});
 function ensureWageSettings(u){if(!u)return;u.wageSettings=u.wageSettings||{};const w=u.wageSettings;w.standardRate=Number.isFinite(Number(w.standardRate))&&Number(w.standardRate)>0?Number(w.standardRate):15;w.enhanced1Rate=Number.isFinite(Number(w.enhanced1Rate))&&Number(w.enhanced1Rate)>0?Number(w.enhanced1Rate):w.standardRate;w.enhanced2Rate=Number.isFinite(Number(w.enhanced2Rate))&&Number(w.enhanced2Rate)>0?Number(w.enhanced2Rate):w.standardRate;w.taxPercent=Math.max(0,Math.min(100,Number.isFinite(Number(w.taxPercent))?Number(w.taxPercent):0));return w}
 (data.users||[]).forEach(ensureWageSettings);
-(data.hours||[]).forEach(h=>{if(!h.rateType)h.rateType='standard';if(h.rateSnapshot==null){const u=(data.users||[]).find(x=>x.id===h.userId);h.rateSnapshot=ensureWageSettings(u)?.[h.rateType==='enhanced1'?'enhanced1Rate':h.rateType==='enhanced2'?'enhanced2Rate':'standardRate']||15;}});refreshAllEventStatuses();const hu=document.getElementById('headerUser');if(hu){const n=currentUser()?.name||'';hu.textContent=n?n.split(/\s+/)[0]:(isLoginRequired()?'Login required':'No login');}const hi=document.getElementById('headerCrewIcon');if(hi){const cu=currentUser();hi.innerHTML=cu?crewAvatarSVG(cu,30):'🧔';}renderDash();renderCreate();renderEquipment();renderEvents();renderJobs();renderPortaloo();renderMarquee();renderActivity();renderNotifications();if(document.getElementById('crewLoginEdit')&&!document.getElementById('crewLoginEdit').classList.contains('hidden'))renderCrewLoginEdit(crewLoginEditId);if(document.getElementById('hours')&&!document.getElementById('hours').classList.contains('hidden')){const hu=currentUser();if(hu)renderHoursPage(hu,currentPayPeriod(),false)}checkPortalooServiceNotifications();checkHireVehicleDateNotifications();renderNotificationBadge();if(document.getElementById('healthSafety')&&!document.getElementById('healthSafety').classList.contains('hidden'))renderHealthSafety();if(document.getElementById('crewHealthSafety')&&!document.getElementById('crewHealthSafety').classList.contains('hidden'))renderCrewHealthSafety();if(document.getElementById('crewManagement')&&!document.getElementById('crewManagement').classList.contains('hidden'))renderCrewManagementPage();if(document.getElementById('appTutorials')&&!document.getElementById('appTutorials').classList.contains('hidden'))renderAppTutorialsPage()}
+(data.hours||[]).forEach(h=>{if(!h.rateType)h.rateType='standard';if(h.rateSnapshot==null){const u=(data.users||[]).find(x=>x.id===h.userId);h.rateSnapshot=ensureWageSettings(u)?.[h.rateType==='enhanced1'?'enhanced1Rate':h.rateType==='enhanced2'?'enhanced2Rate':'standardRate']||15;}});refreshAllEventStatuses();const hu=document.getElementById('headerUser');if(hu){const n=currentUser()?.name||'';hu.textContent=n?n.split(/\s+/)[0]:(isLoginRequired()?'Login required':'No login');}const hi=document.getElementById('headerCrewIcon');if(hi){const cu=currentUser();hi.innerHTML=cu?crewAvatarSVG(cu,30):'🧔';}const renderTasks=[
+ ['dashboard',renderDash],['create',renderCreate],['equipment',renderEquipment],
+ ['events',renderEvents],['jobs',renderJobs],['portaloo',renderPortaloo],
+ ['marquee',renderMarquee],['activity',renderActivity],['notifications',renderNotifications]
+ ];
+ renderTasks.forEach(([target,fn])=>{try{fn()}catch(err){
+  console.error('Backstage section render failed:',target,err);
+  const host=document.getElementById(target);
+  if(host)host.innerHTML='<div class="card"><h2>Section temporarily unavailable</h2><p>'+String(err&&err.message||err||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\''+target+'\')">Try again</button></div>';
+ }});const guarded=(id,fn)=>{const el=document.getElementById(id);if(!el||el.classList.contains('hidden'))return;try{fn()}catch(err){console.error('Backstage section render failed:',id,err);el.innerHTML='<div class="card"><h2>Section temporarily unavailable</h2><p>'+String(err&&err.message||err||'Unknown error').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))+'</p><button class="secondary" onclick="showPage(\''+id+'\')">Try again</button></div>'}};
+ guarded('crewLoginEdit',()=>renderCrewLoginEdit(crewLoginEditId));
+ guarded('hours',()=>{const hu=currentUser();if(hu)renderHoursPage(hu,currentPayPeriod(),false)});
+ try{checkPortalooServiceNotifications()}catch(err){console.error('Portaloo notifications failed',err)}
+ try{checkHireVehicleDateNotifications()}catch(err){console.error('Hire notifications failed',err)}
+ try{renderNotificationBadge()}catch(err){console.error('Notification badge failed',err)}
+ guarded('healthSafety',renderHealthSafety);
+ guarded('crewHealthSafety',renderCrewHealthSafety);
+ guarded('crewManagement',renderCrewManagementPage);
+ guarded('appTutorials',renderAppTutorialsPage);
+}
 
 function renderDash(){
  const d=document.getElementById('dashboard');if(!d)return;
@@ -2864,13 +2893,7 @@ async function closeHeaderQRScan(){const scanner=window.headerQRScanner;window.h
 const V51_KEY='regency_v51_features';
 function uid(p){return (typeof makeId==='function'?makeId(p):p+'_'+Date.now()+'_'+Math.random().toString(36).slice(2));}
 function escV(s){return typeof esc==='function'?esc(String(s??'')):String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function ensureV51(){
- data.v51=data.v51||{};
- data.v51.documents=Array.isArray(data.v51.documents)?data.v51.documents:[];
- data.v51.hireVehicles=Array.isArray(data.v51.hireVehicles)?data.v51.hireVehicles:[];
- data.v51.vehicleFiles=Array.isArray(data.v51.vehicleFiles)?data.v51.vehicleFiles:[];
- return data.v51;
-}
+
 function persist(){try{if(typeof save==='function')save();else localStorage.setItem('avtracker_v1',JSON.stringify(data));return true}catch(e){console.error('V51 save',e);return false}}
 function me(){return typeof currentUser==='function'?currentUser():null}
 function fileSize(n){if(!n)return '';const u=['B','KB','MB','GB'];let i=0,x=n;while(x>=1024&&i<3){x/=1024;i++}return x.toFixed(i?1:0)+' '+u[i]}
@@ -2947,16 +2970,12 @@ window.openHireFile=async function(id){
 
 
 /* Human-friendly references. Original database IDs remain unchanged. */
-function ensureBackstageReferences(){
- let changed=false;const assign=(records,prefix)=>{const list=Array.isArray(records)?records:[];let max=0;list.forEach(x=>{const m=String(x?.displayRef||'').match(new RegExp('^'+prefix+'-(\\d+)$'));if(m)max=Math.max(max,Number(m[1])||0)});list.forEach(x=>{if(x&&!x.displayRef){changed=true;max++;x.displayRef=prefix+'-'+String(max).padStart(3,'0')}});};
- assign(data.events,'EV');assign(data.portalooJobs,'PJ');assign((typeof ensureV51==='function'?ensureV51().hireVehicles:[]),'VH');if(changed&&typeof persist==='function')persist();
- return true;
-}
-function backstageRef(record,prefix){ensureBackstageReferences();return record?.displayRef||'';}
+
+
 
 /* ---------- Hire Vehicles ---------- */
-function hireWasCollected(v){return !!(v&&(v.collectedAt||v.onHireAt||v.status==='On Hire'))}
-function vehicleStatus(v){const today=new Date().toLocaleDateString('en-CA');const to=v.end||'';if(v.returned||['Checked & Returned','Complete','Closed'].includes(v.status)){if(to&&today>to)return 'Closed';return 'Checked & Returned';}if(v.status==='Cancelled'||v.status==='Canceled')return 'Cancelled';if(hireWasCollected(v)){if(to&&today>to)return 'Overdue';return 'On Hire'}return 'Booked'}
+
+
 function vehicleStatusClass(s){return s.toLowerCase().replace(/&/g,'and').replace(/\s+/g,'-')}
 window.openHireVehicles=function(){showPage('hireVehicles');setTimeout(renderHireVehicles,0)}
 window._fleetPlannerDate=window._fleetPlannerDate||new Date().toISOString().slice(0,10);
