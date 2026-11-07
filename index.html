@@ -3952,6 +3952,53 @@ const css=document.createElement('style');css.textContent='#staffCalendar .v746-
 })();
 </script>
 
+<script>
+/* V71.57 Crew Management tile hub: navigation-only redesign, preserving existing actions. */
+(function(){
+ const style=document.createElement('style');
+ style.textContent=`
+ #crewManagement .v757-hub-intro{margin:0 0 14px;color:var(--muted,#aab0aa)}
+ #crewManagement .v757-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ #crewManagement .v757-tile{background:var(--card,#171b18);border:1px solid var(--line,#343a35);border-radius:12px;padding:15px;min-width:0;display:flex;flex-direction:column;gap:7px}
+ #crewManagement .v757-tile .v757-icon{font-size:25px;line-height:1.2}
+ #crewManagement .v757-tile h3{margin:0;font-size:16px}
+ #crewManagement .v757-tile p{margin:0 0 5px;font-size:12px;line-height:1.45;color:var(--muted,#aab0aa);flex:1}
+ #crewManagement .v757-tile button{width:100%;margin-top:3px}
+ #crewManagement .v757-section-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#aab0aa);margin:18px 0 9px}
+ #modalBody .v757-hub-tiles,#modalContent .v757-hub-tiles,.modal-content .v757-hub-tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+ #modalBody .v757-hub-tile,#modalContent .v757-hub-tile,.modal-content .v757-hub-tile{background:var(--card,#171b18);border:1px solid var(--line,#343a35);border-radius:11px;padding:13px;min-width:0}
+ .v757-hub-tile h3{font-size:15px;margin:0 0 6px}.v757-hub-tile p{font-size:12px;color:var(--muted,#aab0aa);margin:0 0 10px;line-height:1.4}.v757-hub-tile button{width:100%}
+ @media(max-width:480px){#crewManagement .v757-tiles{grid-template-columns:1fr}#modalBody .v757-hub-tiles,#modalContent .v757-hub-tiles,.modal-content .v757-hub-tiles{grid-template-columns:1fr}}
+ `;
+ document.head.appendChild(style);
+ window.renderCrewManagementPage=function(){
+  const el=document.getElementById('crewManagement');if(!el)return;
+  const director=typeof isDirector==='function'&&isDirector();
+  el.innerHTML=`<div class="card"><div class="section-head"><div><h2 style="margin:0">👥 Crew Management</h2><div class="muted">Your crew tools, grouped into clear work areas.</div></div></div>
+   <div class="v757-section-label">Quick access</div><div class="v757-tiles">
+    <div class="v757-tile"><div class="v757-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button ${director?'':'disabled'} onclick="newCrewMember()">＋ Add Crew</button></div>
+    <div class="v757-tile"><div class="v757-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button ${director?'':'disabled'} onclick="openAdminHours()">Open Crew Hours</button></div>
+    <div class="v757-tile"><div class="v757-icon">🧑‍🤝‍🧑</div><h3>Manage Crew</h3><p>Open the crew workspace for records, requests, inductions and access settings.</p><button ${director?'':'disabled'} onclick="openCrewManagementHub()">Open Manage Crew</button></div>
+   </div>${director?'':'<p class="small muted" style="margin-top:12px">Some crew administration tools require Director access.</p>'}</div>`;
+ };
+ window.openCrewManagementHub=function(){
+  if(typeof requireDirector==='function'&&!requireDirector('manage crew'))return;
+  openModal(`<div class="section-head"><div><h2 style="margin:0">👷 Manage Crew</h2><p class="muted" style="margin:5px 0 0">Choose a focused area. Each tool keeps its existing records and controls.</p></div></div>
+   <div class="v757-section-label">Crew records</div><div class="v757-hub-tiles">
+    <div class="v757-hub-tile"><h3>👥 Regular Crew</h3><p>Profiles, crew details, documents, expiry dates and Health &amp; Safety records.</p><button onclick="closeModal();openRegularCrewRecords()">Open Regular Crew</button></div>
+    <div class="v757-hub-tile"><h3>🦺 Casual Crew</h3><p>Induction submissions, acknowledgements and shareable induction link.</p><button onclick="closeModal();openCasualCrewManagement()">Open Casual Crew</button></div>
+   </div>
+   <div class="v757-section-label">Requests and staffing</div><div class="v757-hub-tiles">
+    <div class="v757-hub-tile"><h3>📣 Request Crew</h3><p>Publish a dated shift or request crew for an existing job.</p><button onclick="closeModal();staffRequestForm()">＋ Request Crew</button></div>
+    <div class="v757-hub-tile"><h3>🗂️ Manage Requests</h3><p>Review accepted crew, adjust requests and close or reopen shifts.</p><button onclick="closeModal();openCrewRequestManagerV748()">Manage Requests</button></div>
+   </div>
+   <div class="v757-section-label">Access and settings</div><div class="v757-hub-tiles">
+    <div class="v757-hub-tile"><h3>🔐 Crew Login Settings</h3><p>Manage crew PINs and whether login is required on this device.</p><button onclick="closeModal();crewLoginSettings()">Open Login Settings</button></div>
+   </div><button class="secondary" style="margin-top:14px" onclick="closeModal()">Close</button>`);
+ };
+})();
+
+</script>
 </html>
 
 
