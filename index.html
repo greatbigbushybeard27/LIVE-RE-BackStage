@@ -3699,6 +3699,21 @@ patchDocs();
 </script>
 
 <script>
+/* V71.51: authoritative crew booking and employment-type resolver. */
+window.isAcceptedCrewBookingV751=function(row){
+ if(!row||row.kind!=='Shift'||!row.requestId)return false;
+ const uid=String(row.userId),rid=String(row.requestId);
+ return (data.staffRequests||[]).some(r=>String(r.id)===rid&&(r.applications||[]).some(a=>String(a.userId)===uid&&a.status==='Accepted'));
+};
+window.crewEmploymentTypeV751=function(person){
+ const values=[person?.staffType,person?.employmentType,person?.employmentCategory,person?.crewType]
+  .filter(v=>v!==undefined&&v!==null)
+  .map(v=>String(v).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' '));
+ if(values.some(v=>['casual','part time','parttime','part time crew'].includes(v)))return 'Part Time Crew';
+ if(values.some(v=>['regular crew','full time','fulltime','full time crew'].includes(v)))return 'Regular Crew';
+ return 'Unassigned';
+};
+
 /* V71.45 Crew availability and direct shift requests. Extends V71.44 data structures. */
 (function(){
 'use strict';
@@ -3715,7 +3730,7 @@ const eachDate=(a,b,fn)=>{for(let d=a,i=0;d<=b&&i<370;d=addDays(d,1),i++)fn(d)};
 const typeOf=u=>{const x=[u?.staffType,u?.employmentType,u?.employmentCategory,u?.crewType].filter(v=>v!==undefined&&v!==null).join(' ').toLowerCase();return x.includes('regular')||x.includes('full time')||x.includes('full-time')?'Regular Crew':'Part Time Crew'};
 const entries=()=>list('staffCalendar');
 const requests=()=>list('staffRequests');
-const available=(u,k)=>{const rows=entries().filter(x=>String(x.userId)===String(u.id)&&x.startDate<=k&&x.endDate>=k);if(rows.some(x=>typeof window.isAcceptedCrewBookingV750==='function'&&window.isAcceptedCrewBookingV750(x)))return 'booked';if(rows.some(x=>['Holiday','Unavailable','Day Off'].includes(x.kind)))return 'unavailable';if(typeOf(u)==='Regular Crew'&&parse(k).getDay()>0&&parse(k).getDay()<6)return 'available';return rows.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual'))?'available':'none'};
+const available=(u,k)=>{const rows=entries().filter(x=>String(x.userId)===String(u.id)&&x.startDate<=k&&x.endDate>=k);if(rows.some(x=>window.isAcceptedCrewBookingV751(x)))return 'booked';if(rows.some(x=>['Holiday','Unavailable','Day Off'].includes(x.kind)))return 'unavailable';if(typeOf(u)==='Regular Crew'&&parse(k).getDay()>0&&parse(k).getDay()<6)return 'available';return rows.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual'))?'available':'none'};
 const overlap=(a,b,c,d)=>a<=d&&c<=b;
 function jobName(id){const all=[...(data.events||[]),...(data.jobs||[]),...(data.portalooJobs||[])];const j=all.find(x=>String(x.id)===String(id));return j?.name||j?.title||'Standalone shift'}
 function crewCanAccept(u,r){let ok=true;eachDate(r.startDate,r.endDate,k=>{const state=available(u,k);if(state==='unavailable'||state==='booked')ok=false;});return ok}
@@ -3725,7 +3740,7 @@ function refresh(){try{renderStaffCalendar()}catch(e){console.warn('Calendar ref
 
 // Employment-type changes preserve red unavailable days; regular weekday availability is derived, not stored.
 const oldEmployment=window.setCrewEmploymentType;
-window.setCrewEmploymentType=function(userId,value){if(!director())return alert('Director access required.');if(!['Regular Crew','Part Time Crew'].includes(value))return;const u=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u)return;if(oldEmployment)oldEmployment(userId,value);else{u.staffType=u.employmentType=u.employmentCategory=u.crewType=value;}/* Keep personal working and unavailable entries when employment type changes. */save();refresh();};
+window.setCrewEmploymentType=function(userId,value){if(!director())return alert('Director access required.');if(!['Regular Crew','Part Time Crew'].includes(value))return;const u=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u)return;u.staffType=value;u.employmentType=value;u.employmentCategory=value;u.crewType=value;/* Keep personal working and unavailable entries when employment type changes. */save();refresh();};
 
 window.staffRequestForm=function(){if(!director())return alert('Director access required.');const jobs=[...(data.events||[]),...(data.jobs||[]),...(data.portalooJobs||[])];openModal(`<h2>＋ Request Crew</h2><p class="muted">Publish a shift for crew to accept directly.</p><label>Request for<select id="ncr_source" onchange="newCrewRequestSourceChanged()"><option value="date">Specific date</option><option value="job">Existing job</option></select></label><div id="ncr_job_wrap" style="display:none"><label>Choose job<select id="ncr_job">${jobs.map(j=>`<option value="${escv(j.id)}">${escv(j.name||j.title||'Job')}</option>`).join('')}</select></label></div><label>Shift title<input id="ncr_title" placeholder="e.g. Festival build crew"></label><div class="create-grid"><label>Start date<input id="ncr_start" type="date" value="${day(new Date())}"></label><label>End date<input id="ncr_end" type="date" value="${day(new Date())}"></label></div><div class="create-grid"><label>Start time<input id="ncr_time" type="time" value="08:00"></label><label>Finish time<input id="ncr_finish" type="time" value="17:00"></label></div><label>Number of crew required<select id="ncr_mode" onchange="document.getElementById('ncr_quota_wrap').style.display=this.value==='quota'?'block':'none'"><option value="quota">Set a number</option><option value="open">As many crew as possible</option></select></label><div id="ncr_quota_wrap"><label>Crew required<input id="ncr_quota" type="number" min="1" max="250" value="4"></label></div><label>Notes<textarea id="ncr_notes" rows="3" placeholder="Location, duties, clothing, meeting point..."></textarea></label><div class="actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="saveCrewRequestV745()">Publish Request</button></div>`)};
 window.newCrewRequestSourceChanged=function(){const v=document.getElementById('ncr_source')?.value;const w=document.getElementById('ncr_job_wrap');if(w)w.style.display=v==='job'?'block':'none';};
@@ -3770,11 +3785,12 @@ const fmt=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
 const allUsers=()=>((data.users||[]).filter(x=>x&&x.id&&String(x.name||'').trim().toLowerCase()!=='regency crew'));
 const getState=(person,k)=>{
  const records=(data.staffCalendar||[]).filter(x=>String(x.userId)===String(person.id)&&x.startDate<=k&&x.endDate>=k);
- if(records.some(x=>typeof window.isAcceptedCrewBookingV750==='function'&&window.isAcceptedCrewBookingV750(x)))return 'available';
+ if(records.some(x=>window.isAcceptedCrewBookingV751(x)))return 'available';
  if(records.some(x=>['Holiday','Unavailable','Day Off'].includes(x.kind)))return 'unavailable';
- const regular=typeof staffType==='function'?staffType(person)==='Regular Crew':String(person.staffType||'').includes('Regular');
- const weekday=parse(k).getDay()>0&&parse(k).getDay()<6;
- if(regular&&weekday)return 'available';
+ const values=[person.staffType,person.employmentType,person.employmentCategory,person.crewType].filter(v=>v!=null).map(v=>String(v).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' '));
+ const partTime=values.some(v=>['casual','part time','parttime','part time crew'].includes(v));
+ const regular=!partTime&&values.some(v=>['regular crew','full time','fulltime','full time crew'].includes(v));
+ if(regular&&parse(k).getDay()>0&&parse(k).getDay()<6)return 'available';
  if(records.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual')))return 'available';
  return 'none';
 };
@@ -3887,9 +3903,9 @@ window.isAcceptedCrewBookingV750=function(row){
 };
 function stateForDayV750(person,date){
  const rows=arr('staffCalendar').filter(x=>String(x.userId)===String(person.id)&&x.startDate<=date&&x.endDate>=date);
- if(rows.some(x=>window.isAcceptedCrewBookingV750(x)))return 'booked';
+ if(rows.some(x=>window.isAcceptedCrewBookingV751(x)))return 'booked';
  if(rows.some(x=>['Unavailable','Holiday','Day Off'].includes(x.kind)))return 'unavailable';
- const regular=(typeof staffType==='function'?staffType(person):person.staffType)==='Regular Crew';
+ const regular=window.crewEmploymentTypeV751(person)==='Regular Crew';
  const weekday=!([0,6].includes(new Date(date+'T12:00:00').getDay()));
  if(regular&&weekday)return 'working';
  if(rows.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual')))return 'working';
@@ -3904,7 +3920,7 @@ window.crewRosterAvailabilityV748=function(userId,date){
 };
 window.setCrewDayStateV750=function(userId,date,state){
  const u=me(),person=(data.users||[]).find(x=>String(x.id)===String(userId));if(!u||!person||(String(u.id)!==String(userId)&&!director()))return alert('You can only edit your own calendar.');
- const rows=arr('staffCalendar');if(rows.some(x=>String(x.userId)===String(userId)&&x.startDate<=date&&x.endDate>=date&&window.isAcceptedCrewBookingV750(x)))return alert('This day has a confirmed shift. Open the booking to view its details.');
+ const rows=arr('staffCalendar');if(rows.some(x=>String(x.userId)===String(userId)&&x.startDate<=date&&x.endDate>=date&&window.isAcceptedCrewBookingV751(x)))return alert('This day has a confirmed shift. Open the booking to view its details.');
  const kept=[];
  rows.forEach(x=>{
   if(String(x.userId)!==String(userId)||!['Available','Unavailable','Holiday','Day Off'].includes(x.kind)||x.startDate>date||x.endDate<date){kept.push(x);return;}
