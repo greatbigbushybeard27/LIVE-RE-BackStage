@@ -4307,37 +4307,4 @@ window.renderStaffCalendar=function(){
 };
 window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.renderStaffCalendar();};
 })();
-</script>v753-filters button{padding:8px 11px!important;font-size:12px!important}
- #staffCalendar .v753-date{display:flex;align-items:center;gap:8px;margin:10px 0}
- #staffCalendar .v753-date input{max-width:190px}
- #staffCalendar .v753-filters{display:flex;gap:6px;overflow-x:auto;white-space:nowrap;margin:8px 0;padding:2px 0}
- #staffCalendar .v753-filters button{flex:0 0 auto}
- #staffCalendar .v753-filters button.active,#staffCalendar .v753-views button.active{background:#285c3e!important;border-color:#159c61!important;color:#fff!important}
- #staffCalendar .v753-scroll{overflow-x:auto;max-width:100%;padding-bottom:8px}
- #staffCalendar .v753-grid{min-width:${view==='month'?'900px':view==='week'?'520px':'0'}}
- #staffCalendar .v753-head,#staffCalendar .v753-row{display:grid;grid-template-columns:82px minmax(0,1fr);gap:6px;align-items:stretch}
- #staffCalendar .v753-head{margin:12px 0 5px}
- #staffCalendar .v753-days,#staffCalendar .v753-track{display:grid;grid-template-columns:repeat(${cols},minmax(${view==='month'?'24px':'0'},1fr));gap:4px}
- #staffCalendar .v753-head span{text-align:center;font-size:10px;color:var(--regency-muted);font-weight:800;white-space:nowrap}
- #staffCalendar .v753-row{padding:5px 0;border-bottom:1px solid var(--regency-border)}
- #staffCalendar .v753-name{position:sticky;left:0;z-index:2;background:var(--regency-panel);display:flex;align-items:center;font-weight:800;font-size:13px;overflow:hidden;white-space:nowrap}
- #staffCalendar .v753-cell{min-width:0;height:43px;border-radius:7px;padding:2px;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer}
- #staffCalendar .v753-track.day .v753-cell{height:58px}
- #staffCalendar .v753-track.month .v753-cell{height:35px;font-size:10px}
- #staffCalendar .v753-note{position:absolute;right:3px;top:3px;width:5px;height:5px;border-radius:50%;background:#fff}
- #staffCalendar .v753-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px}
- #staffCalendar .v753-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
- @media(max-width:600px){#staffCalendar .v753-grid{min-width:${view==='month'?'900px':'520px'}}#staffCalendar .v753-name{font-size:12px}#staffCalendar .v753-cell{height:42px}}
- </style><div class="card">
- <div class="v753-toolbar"><div><h2 style="margin:0">📅 Crew Calendar</h2><p class="muted">Crew roster and availability.</p></div><div class="v753-actions"><button class="secondary" onclick="staffCalMove(-1)">‹</button><b>${heading}</b><button class="secondary" onclick="staffCalMove(1)">›</button></div></div>
- <div class="v753-views">${['day','week','month'].map(v=>`<button class="${view===v?'active':'secondary'}" onclick="setStaffCalendarView('${v}')">${v[0].toUpperCase()+v.slice(1)}</button>`).join('')}<button class="secondary" onclick="staffCalendarToday()">Today</button><button class="secondary" onclick="openCrewBulkUnavailableV754()">＋ Multiple days off</button></div>
- <label class="v753-date small">Go to date <input type="date" value="${dateKey(anchor)}" onchange="anchorCrewCalendarV753(this.value)"></label>
- ${filters}
- <div class="v753-scroll"><div class="v753-grid"><div class="v753-head"><b class="small">Crew member</b><div class="v753-days">${dateHead}</div></div>${body||'<p class="muted">No crew members match this filter.</p>'}</div></div>
- <div class="v753-legend"><span><i style="background:#287a55"></i>Working</span><span><i style="background:#a94d55"></i>Unavailable</span><span><i style="background:#111512;border:1px solid #555"></i>Not scheduled</span></div>
- <p class="muted small">Select a date in your own row to change availability. Regular Crew are automatically available Monday to Friday.</p>
- </div>`;
-};
-window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.renderStaffCalendar();};
-})();
 </script>
