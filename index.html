@@ -3699,7 +3699,7 @@ patchDocs();
 </script>
 
 <script>
-/* V71.51: authoritative crew booking and employment-type resolver. */
+/* V71.52: authoritative crew booking and employment-type resolver. */
 window.isAcceptedCrewBookingV751=function(row){
  if(!row||row.kind!=='Shift'||!row.requestId)return false;
  const uid=String(row.userId),rid=String(row.requestId);
@@ -4091,7 +4091,26 @@ body:not(.light-theme) .fleet-booking-bar.off-island span { background-color: #d
 /* V71.47: responsive crew roster controls and direct crew profile management. */
 (function(){'use strict';
 window.crewRosterAvailabilityV747=function(userId,date){const u=typeof currentUser==='function'?currentUser():null;if(!u)return;if(!(typeof isDirector==='function'&&isDirector())&&String(userId)!==String(u.id))return alert('You can only change your own availability.');window._scUser=String(userId);window.crewAvailabilitySelectV745(date);};
-window.openCrewProfilesV747=function(){if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');const users=(data.users||[]).filter(x=>x&&x.id&&String(x.name||'').trim().toLowerCase()!=='regency crew').slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));const safe=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));openModal('<h2>👥 Crew Profiles</h2><p class="muted">Set each crew member as Regular Crew or Part Time Crew. This controls their default availability in the crew calendar.</p>'+users.map(u=>'<div class="card" style="margin:8px 0;padding:12px"><b>'+safe(u.name)+'</b><label style="display:block;margin-top:8px">Employment type<select style="width:100%" onchange="setCrewEmploymentType(\''+safe(u.id)+'\',this.value)"><option value="Regular Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Regular Crew'?'selected':'')+'>Regular Crew</option><option value="Part Time Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Part Time Crew'?'selected':'')+'>Part Time Crew</option></select></label></div>').join('')||'<p class="muted">No crew profiles found.</p>');};
+window.exportCrewCalendarDiagnosticsV752=function(){
+ if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');
+ const users=(data.users||[]).filter(u=>u&&u.id&&String(u.name||'').trim().toLowerCase()!=='regency crew');
+ const ids=new Set(users.map(u=>String(u.id)));
+ const fields=['staffType','employmentType','employmentCategory','crewType'];
+ const crew=users.map(u=>{const types={};fields.forEach(k=>types[k]=u[k]??null);let resolved='Unknown';try{if(typeof window.crewEmploymentTypeV751==='function')resolved=window.crewEmploymentTypeV751(u);else if(typeof staffType==='function')resolved=staffType(u);}catch(e){resolved='ERROR: '+String(e)}return {id:u.id,name:u.name||'',role:u.role||'',employmentFields:types,resolvedEmploymentType:resolved};});
+ const calendar=(data.staffCalendar||[]).filter(r=>ids.has(String(r.userId))).map(r=>({id:r.id||null,userId:r.userId,kind:r.kind||null,startDate:r.startDate||null,endDate:r.endDate||null,source:r.source||null,status:r.status||null,confirmed:r.confirmed??null,requestId:r.requestId||null,note:r.note||null}));
+ const requests=(data.staffRequests||[]).map(r=>({id:r.id,title:r.title||r.name||'',jobId:r.jobId||null,startDate:r.startDate||null,endDate:r.endDate||null,status:r.status||null,requestType:r.requestType||null,quota:r.quota??null,applications:(r.applications||[]).filter(a=>ids.has(String(a.userId))).map(a=>({userId:a.userId,name:a.name||'',status:a.status||null,role:a.role||null,appliedAt:a.appliedAt||null}))})).filter(r=>r.applications.length||calendar.some(c=>String(c.requestId)===String(r.id)));
+ const payload={exportType:'crew-calendar-diagnostics',version:'V71.52',createdAt:new Date().toISOString(),summary:{crewMembers:crew.length,calendarEntries:calendar.length,relatedRequests:requests.length},crew,staffCalendar:calendar,staffRequests:requests};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Backstage-Crew-Diagnostics-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert('Crew diagnostics exported. This is a read-only export and has not changed any app data.');
+};
+window.openCrewProfilesV747=function(){
+ if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');
+ const users=(data.users||[]).filter(x=>x&&x.id&&String(x.name||'').trim().toLowerCase()!=='regency crew').slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
+ const safe=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ openModal('<h2>👥 Crew Profiles</h2><p class="muted">Set each crew member as Regular Crew or Part Time Crew. This controls their default availability in the crew calendar.</p>'+users.map(u=>'<div class="card" style="margin:8px 0;padding:12px"><b>'+safe(u.name)+'</b><label style="display:block;margin-top:8px">Employment type<select style="width:100%" onchange="setCrewEmploymentType(\''+safe(u.id)+'\',this.value)"><option value="Regular Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Regular Crew'?'selected':'')+'>Regular Crew</option><option value="Part Time Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Part Time Crew'?'selected':'')+'>Part Time Crew</option></select></label></div>').join('')||'<p class="muted">No crew profiles found.</p>');
+ const diagnosticButton='<div class="card" style="margin-top:14px;padding:12px"><h3>🧪 Crew Calendar Diagnostics</h3><p class="muted">Read-only export of employment settings, calendar entries and accepted crew requests. No live records are changed.</p><button onclick="exportCrewCalendarDiagnosticsV752()">Download Crew Diagnostics</button></div>';
+ const modal=document.getElementById('modalBody')||document.querySelector('.modal-content')||document.getElementById('modalContent');
+ if(modal)modal.insertAdjacentHTML('beforeend',diagnosticButton);
+};
 const priorHub=window.openCrewManagementHub;
 if(typeof priorHub==='function'&&!priorHub.__v747){window.openCrewManagementHub=function(){priorHub.apply(this,arguments);const modal=document.getElementById('modalBody')||document.querySelector('.modal-content')||document.getElementById('modalContent');if(modal&&!modal.querySelector('#crewProfilesHubV747')){const card=document.createElement('div');card.className='card';card.id='crewProfilesHubV747';card.innerHTML='<h3>👥 Crew Profiles</h3><p class="muted">View crew members and define Regular or Part Time employment.</p><button onclick="openCrewProfilesV747()">Open Crew Profiles</button>';modal.insertBefore(card,modal.firstChild);}};window.openCrewManagementHub.__v747=true;}
 })();
