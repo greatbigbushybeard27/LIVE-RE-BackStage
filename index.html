@@ -4258,15 +4258,56 @@ window.exportCrewCalendarDiagnosticsV752=function(){
  const crew=users.map(u=>{const types={};fields.forEach(k=>types[k]=u[k]??null);let resolved='Unknown';try{if(typeof window.crewEmploymentTypeV751==='function')resolved=window.crewEmploymentTypeV751(u);else if(typeof staffType==='function')resolved=staffType(u);}catch(e){resolved='ERROR: '+String(e)}return {id:u.id,name:u.name||'',role:u.role||'',employmentFields:types,resolvedEmploymentType:resolved};});
  const calendar=(data.staffCalendar||[]).filter(r=>ids.has(String(r.userId))).map(r=>({id:r.id||null,userId:r.userId,kind:r.kind||null,startDate:r.startDate||null,endDate:r.endDate||null,source:r.source||null,status:r.status||null,confirmed:r.confirmed??null,requestId:r.requestId||null,note:r.note||null}));
  const requests=(data.staffRequests||[]).map(r=>({id:r.id,title:r.title||r.name||'',jobId:r.jobId||null,startDate:r.startDate||null,endDate:r.endDate||null,status:r.status||null,requestType:r.requestType||null,quota:r.quota??null,applications:(r.applications||[]).filter(a=>ids.has(String(a.userId))).map(a=>({userId:a.userId,name:a.name||'',status:a.status||null,role:a.role||null,appliedAt:a.appliedAt||null}))})).filter(r=>r.applications.length||calendar.some(c=>String(c.requestId)===String(r.id)));
- const payload={exportType:'crew-calendar-diagnostics',version:'V71.52',createdAt:new Date().toISOString(),summary:{crewMembers:crew.length,calendarEntries:calendar.length,relatedRequests:requests.length},crew,staffCalendar:calendar,staffRequests:requests};
+ const payload={exportType:'crew-calendar-diagnostics',version:'V71.52',createdAt:new Date().toISOString(),summary:{crewMembers:crew.length,calendarEntries:calendar.length,archivedCalendarEntries:(data.staffCalendarArchive||[]).length,relatedRequests:requests.length},crew,staffCalendar:calendar,archivedStaffCalendar:(data.staffCalendarArchive||[]),staffRequests:requests};
  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Backstage-Crew-Diagnostics-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);alert('Crew diagnostics exported. This is a read-only export and has not changed any app data.');
+};
+
+window.previewLegacyCrewCalendarCleanupV164=function(){
+ if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');
+ const targets=[
+  ['avail_1793904464083','user-muq3mz6d-c8ci','Available','2026-11-02'],
+  ['avail_1793904477722','user-muq3mz6d-c8ci','Available','2026-11-05'],
+  ['avail_1793964445336','user-muq3mz6d-c8ci','Available','2026-11-08'],
+  ['crewday_1794059170560_ad4o','user-muq3mz6d-c8ci','Available','2026-11-03'],
+  ['crewday_1794059172284_u9se','user-muq3mz6d-c8ci','Available','2026-11-04'],
+  ['crewday_1794059191299_k6hh','user-muq3mz6d-c8ci','Available','2026-11-10'],
+  ['crewday_1794059193653_rhtp','user-muq3mz6d-c8ci','Available','2026-11-11'],
+  ['crewday_1794059197023_c8jt','user-muq3mz6d-c8ci','Available','2026-11-12'],
+  ['crewday_1794065028631_moeb','user-muq3mz6d-c8ci','Available','2026-11-06'],
+  ['crewday_1794059339831_b48v','user-muv300l2-i8si','Available','2026-11-09'],
+  ['crewday_1794063269519_hhfn','user-muv300l2-i8si','Available','2026-11-04']
+ ];
+ const active=Array.isArray(data.staffCalendar)?data.staffCalendar:[];
+ const matches=targets.map(t=>active.find(r=>String(r.id)===t[0]&&String(r.userId)===t[1]&&r.kind===t[2]&&r.startDate===t[3]&&r.endDate===t[3]));
+ const missing=targets.filter((t,i)=>!matches[i]);
+ if(missing.length){alert('Cleanup paused. '+missing.length+' of the 11 expected legacy records did not match exactly. No records were changed. Export fresh Crew Diagnostics and review first.');return;}
+ const protectedRows=active.filter(r=>String(r.userId)==='user-muq3mz6d-c8ci'&&(r.kind==='Shift'||['Unavailable','Holiday','Day Off'].includes(r.kind)));
+ const hasShift=protectedRows.some(r=>r.id==='shift_1794056122871_0ks1f'&&r.kind==='Shift'&&r.startDate==='2026-11-08'&&r.endDate==='2026-11-08'&&r.confirmed===true);
+ const holidays=['2026-11-18','2026-11-19','2026-11-20','2026-11-21','2026-11-22','2026-11-23'];
+ const hasHoliday=holidays.every(d=>protectedRows.some(r=>r.userId==='user-muq3mz6d-c8ci'&&r.kind==='Unavailable'&&r.startDate===d&&r.endDate===d));
+ if(!hasShift||!hasHoliday){alert('Cleanup paused. The confirmed 8 November shift or all six holiday entries did not match the expected records. No records were changed.');return;}
+ const preview=targets.map(t=>t[3]+' · '+(t[1]==='user-muq3mz6d-c8ci'?'Craig Nicholson':'Lloyd Helyer')).join('\n');
+ if(!confirm('ARCHIVE 11 LEGACY AVAILABILITY ENTRIES?\n\n'+preview+'\n\nThis will move only these exact Available records into a retained archive. It will preserve Craig’s confirmed 8 November shift, his 18–23 November holiday, and all other crew records. A backup JSON will download before saving.\n\nContinue?'))return;
+ const selected=new Set(targets.map(t=>t[0]));
+ const moving=active.filter(r=>selected.has(String(r.id)));
+ const backup={type:'Backstage crew calendar cleanup backup',createdAt:new Date().toISOString(),entries:moving};
+ const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download='Backstage-Legacy-Crew-Availability-Backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+ data.staffCalendarArchive=Array.isArray(data.staffCalendarArchive)?data.staffCalendarArchive:[];
+ const already=new Set(data.staffCalendarArchive.map(r=>String(r.id)));
+ moving.forEach(r=>{if(!already.has(String(r.id)))data.staffCalendarArchive.push({...r,archivedAt:new Date().toISOString(),archiveReason:'Confirmed legacy test availability cleanup V71.64'});});
+ data.staffCalendar=active.filter(r=>!selected.has(String(r.id)));
+ if(typeof persist==='function')persist();else if(typeof saveData==='function')saveData();
+ alert('Archived '+moving.length+' legacy availability entries. The 8 November confirmed shift and 18–23 November holiday were preserved. A backup JSON was downloaded. Export diagnostics again to verify the active calendar.');
+ try{if(typeof window.renderStaffCalendar==='function')window.renderStaffCalendar();}catch(e){}
+ try{if(typeof window.renderCrewAvailableShifts==='function')window.renderCrewAvailableShifts();}catch(e){}
 };
 window.openCrewProfilesV747=function(){
  if(!(typeof isDirector==='function'&&isDirector()))return alert('Director access required.');
  const users=(data.users||[]).filter(x=>x&&x.id&&String(x.name||'').trim().toLowerCase()!=='regency crew').slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
  const safe=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  openModal('<h2>👥 Crew Profiles</h2><p class="muted">Set each crew member as Regular Crew or Part Time Crew. This controls their default availability in the crew calendar.</p>'+users.map(u=>'<div class="card" style="margin:8px 0;padding:12px"><b>'+safe(u.name)+'</b><label style="display:block;margin-top:8px">Employment type<select style="width:100%" onchange="setCrewEmploymentType(\''+safe(u.id)+'\',this.value)"><option value="Regular Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Regular Crew'?'selected':'')+'>Regular Crew</option><option value="Part Time Crew" '+((typeof staffType==='function'?staffType(u):u.staffType)==='Part Time Crew'?'selected':'')+'>Part Time Crew</option></select></label></div>').join('')||'<p class="muted">No crew profiles found.</p>');
- const diagnosticButton='<div class="card" style="margin-top:14px;padding:12px"><h3>🧪 Crew Calendar Diagnostics</h3><p class="muted">Read-only export of employment settings, calendar entries and accepted crew requests. No live records are changed.</p><button onclick="exportCrewCalendarDiagnosticsV752()">Download Crew Diagnostics</button></div>';
+ const diagnosticButton='<div class="card" style="margin-top:14px;padding:12px"><h3>🧪 Crew Calendar Diagnostics</h3><p class="muted">Export crew settings and active calendar entries.</p><button onclick="exportCrewCalendarDiagnosticsV752()">Download Crew Diagnostics</button><hr><h3>🗄️ Legacy availability cleanup</h3><p class="small muted">Archives only 11 exact legacy Available entries from the 9 November diagnostic export. It first checks the confirmed 8 November shift and all six holiday entries, downloads a backup, and leaves all other crew records untouched.</p><button class="secondary" onclick="previewLegacyCrewCalendarCleanupV164()">Review &amp; archive 11 legacy entries</button></div>';
  const modal=document.getElementById('modalBody')||document.querySelector('.modal-content')||document.getElementById('modalContent');
  if(modal)modal.insertAdjacentHTML('beforeend',diagnosticButton);
 };
