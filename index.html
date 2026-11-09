@@ -450,7 +450,7 @@ body.light-theme #themeFaderControl .tf-track:before{background:#64748b}
 @media(max-width:600px){#themeFaderControl{left:6px;top:6px;padding:5px 6px;gap:5px}#themeFaderControl .tf-track{height:50px}#themeFaderControl[data-mode="light"] .tf-knob{top:27px}}
 
 </style>
-<meta name="regency-build" content="V71.7-BALANCED-DESKTOP-CARDS-DEEP-DISCREET"><meta name="theme-color" content="#050807"><style id="v585-copy-job-av-quantity">.v585-av-row{gap:8px;align-items:center}.v585-av-thumb{width:38px!important;height:38px!important;object-fit:cover;border-radius:7px;margin-right:0!important;flex:0 0 38px!important}.v585-av-name{min-width:0;overflow-wrap:anywhere}.v585-av-qty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;padding:4px 7px;border:1px solid var(--border,#334155);border-radius:8px;flex:0 0 auto}.v585-av-qty b{font-size:17px}.v585-av-qty .small{font-size:10px}.v585-av-row .manage-actions{gap:4px;flex-wrap:wrap}@media(max-width:430px){.v585-av-row{gap:5px}.v585-av-thumb{width:32px!important;height:32px!important;flex-basis:32px!important}.v585-av-qty{min-width:38px;padding:3px 5px}.v585-av-row .manage-actions button{padding:6px 7px;font-size:12px}}</style>
+<meta name="regency-build" content="V71.59-CREW-SCHEDULE-CONSOLIDATION"><meta name="theme-color" content="#050807"><style id="v585-copy-job-av-quantity">.v585-av-row{gap:8px;align-items:center}.v585-av-thumb{width:38px!important;height:38px!important;object-fit:cover;border-radius:7px;margin-right:0!important;flex:0 0 38px!important}.v585-av-name{min-width:0;overflow-wrap:anywhere}.v585-av-qty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:48px;padding:4px 7px;border:1px solid var(--border,#334155);border-radius:8px;flex:0 0 auto}.v585-av-qty b{font-size:17px}.v585-av-qty .small{font-size:10px}.v585-av-row .manage-actions{gap:4px;flex-wrap:wrap}@media(max-width:430px){.v585-av-row{gap:5px}.v585-av-thumb{width:32px!important;height:32px!important;flex-basis:32px!important}.v585-av-qty{min-width:38px;padding:3px 5px}.v585-av-row .manage-actions button{padding:6px 7px;font-size:12px}}</style>
 
 
 <style id="backstage-desktop-responsive-layout">
@@ -3739,7 +3739,7 @@ const eachDate=(a,b,fn)=>{for(let d=a,i=0;d<=b&&i<370;d=addDays(d,1),i++)fn(d)};
 const typeOf=u=>{const x=[u?.staffType,u?.employmentType,u?.employmentCategory,u?.crewType].filter(v=>v!==undefined&&v!==null).join(' ').toLowerCase();return x.includes('regular')||x.includes('full time')||x.includes('full-time')?'Regular Crew':'Part Time Crew'};
 const entries=()=>list('staffCalendar');
 const requests=()=>list('staffRequests');
-const available=(u,k)=>{const rows=entries().filter(x=>String(x.userId)===String(u.id)&&x.startDate<=k&&x.endDate>=k);if(rows.some(x=>window.isAcceptedCrewBookingV751(x)))return 'booked';if(rows.some(x=>['Holiday','Unavailable','Day Off'].includes(x.kind)))return 'unavailable';if(typeOf(u)==='Regular Crew'&&parse(k).getDay()>0&&parse(k).getDay()<6)return 'available';return rows.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual'))?'available':'none'};
+const available=(u,k)=>window.BackstageCrewScheduleV159?window.BackstageCrewScheduleV159.stateFor(u,k):(()=>{const rows=entries().filter(x=>String(x.userId)===String(u.id)&&x.startDate<=k&&x.endDate>=k);if(rows.some(x=>window.isAcceptedCrewBookingV751(x)))return 'booked';if(rows.some(x=>['Holiday','Unavailable','Day Off'].includes(x.kind)))return 'unavailable';if(typeOf(u)==='Regular Crew'&&parse(k).getDay()>0&&parse(k).getDay()<6)return 'available';return rows.some(x=>x.kind==='Available'&&(x.source==='manual'||x.source==='crew-manual'))?'available':'none'})();
 const overlap=(a,b,c,d)=>a<=d&&c<=b;
 function jobName(id){const all=[...(data.events||[]),...(data.jobs||[]),...(data.portalooJobs||[])];const j=all.find(x=>String(x.id)===String(id));return j?.name||j?.title||'Standalone shift'}
 function crewCanAccept(u,r){let ok=true;eachDate(r.startDate,r.endDate,k=>{const state=available(u,k);if(state==='unavailable'||state==='booked')ok=false;});return ok}
@@ -3890,6 +3890,106 @@ if(typeof priorProfile==='function'&&!priorProfile.__v746){window.openCrewProfil
 
 
 
+
+
+<script>
+/* V71.59: one authoritative crew scheduling resolver and safe booking guards.
+   Existing staffCalendar and staffRequests records remain the persisted source data.
+   This layer centralises interpretation; it does not bulk-delete or rewrite history. */
+(function(){
+ 'use strict';
+ const rows=()=>Array.isArray(data.staffCalendar)?data.staffCalendar:(data.staffCalendar=[]);
+ const requests=()=>Array.isArray(data.staffRequests)?data.staffRequests:[];
+ const people=()=>Array.isArray(data.users)?data.users:[];
+ const keyDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s);
+ const dayDate=s=>new Date(String(s)+'T12:00:00');
+ const employment=p=>{
+  const vals=[p?.staffType,p?.employmentType,p?.employmentCategory,p?.crewType].filter(v=>v!==undefined&&v!==null).map(v=>String(v).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' '));
+  if(vals.some(v=>['casual','part time','parttime','part time crew'].includes(v)))return 'Part Time Crew';
+  if(vals.some(v=>['regular crew','full time','fulltime','full time crew'].includes(v)))return 'Regular Crew';
+  // Preserve the established V71.53 legacy default for existing profiles.
+  return 'Regular Crew';
+ };
+ function isBookedRow(row){
+  if(!row||row.kind!=='Shift'||row.confirmed===false)return false;
+  const terminal=['declined','withdrawn','cancelled','canceled','rejected'];
+  if(terminal.includes(String(row.status||'').toLowerCase()))return false;
+  if(row.requestId){
+   const req=requests().find(r=>String(r.id)===String(row.requestId));
+   const accepted=!!req&&(req.applications||[]).some(a=>String(a.userId)===String(row.userId)&&String(a.status||'').toLowerCase()==='accepted');
+   // Older confirmed request rows remain valid if the request record was archived.
+   return accepted||(!req&&row.confirmed===true&&String(row.status||'').toLowerCase()==='accepted');
+  }
+  // Director-entered legacy Shift rows without a request link remain bookings.
+  return true;
+ }
+ function stateFor(person,date){
+  if(!person||!person.id||!keyDate(date))return 'none';
+  const dayRows=rows().filter(r=>String(r.userId)===String(person.id)&&keyDate(r.startDate)&&keyDate(r.endDate)&&r.startDate<=date&&r.endDate>=date);
+  if(dayRows.some(isBookedRow))return 'booked';
+  if(dayRows.some(r=>['Unavailable','Holiday','Day Off'].includes(r.kind)))return 'unavailable';
+  if(dayRows.some(r=>r.kind==='Available'))return 'available';
+  const weekday=dayDate(date).getDay();
+  return employment(person)==='Regular Crew'&&weekday>=1&&weekday<=5?'available':'none';
+ }
+ function canAccept(person,request){
+  if(!person||!request||!keyDate(request.startDate)||!keyDate(request.endDate)||request.endDate<request.startDate)return false;
+  let d=dayDate(request.startDate),end=dayDate(request.endDate),guard=0;
+  while(d<=end&&guard++<370){
+   const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+   const state=stateFor(person,k);
+   if(state==='booked'||state==='unavailable'||state==='none')return false;
+   d.setDate(d.getDate()+1);
+  }
+  return guard<=370;
+ }
+ function dedupeRequestRows(requestId,userId){
+  // Remove only exact duplicate rows for the same accepted request/person/range.
+  // Availability and unrelated historical records are untouched.
+  const seen=new Set();let changed=false;
+  data.staffCalendar=rows().filter(r=>{
+   if(String(r.requestId)!==String(requestId)||String(r.userId)!==String(userId)||r.kind!=='Shift')return true;
+   const k=[r.startDate,r.endDate,r.kind].join('|');
+   if(seen.has(k)){changed=true;return false;}seen.add(k);return true;
+  });
+  if(changed){if(typeof persist==='function')persist();else if(typeof saveData==='function')saveData();}
+ }
+ window.BackstageCrewScheduleV159={version:'V71.59',isBookedRow,stateFor,canAccept,employment,dedupeRequestRows};
+ window.isAcceptedCrewBookingV751=isBookedRow;
+ // The direct-accept workflow must pass the same availability test as the calendar.
+ const oldAccept=window.acceptCrewRequestV745;
+ if(typeof oldAccept==='function'&&!oldAccept.__v159){
+  const wrapped=function(id){
+   const user=typeof currentUser==='function'?currentUser():null,req=requests().find(r=>String(r.id)===String(id));
+   if(user&&req&&!canAccept(user,req))return alert('This shift overlaps an existing booking, an unavailable day, or a day you have not marked available. Check your crew calendar first.');
+   const result=oldAccept.apply(this,arguments);
+   if(user&&req)dedupeRequestRows(req.id,user.id);
+   return result;
+  };wrapped.__v159=true;window.acceptCrewRequestV745=wrapped;
+ }
+ // Director acceptance uses the same conflict check, preventing double-booking by override.
+ const oldReview=window.reviewStaffApplication;
+ if(typeof oldReview==='function'&&!oldReview.__v159){
+  const wrapped=function(reqId,appId,decision){
+   if(decision==='Accept'&&typeof isDirector==='function'&&isDirector()){
+    const req=requests().find(r=>String(r.id)===String(reqId));
+    const app=req&&(req.applications||[]).find(a=>String(a.id)===String(appId));
+    const person=app&&people().find(p=>String(p.id)===String(app.userId));
+    if(req&&app&&person&&!canAccept(person,req))return alert('This crew member is already booked, unavailable, or has not marked every day available. Their calendar has not been changed.');
+   }
+   const result=oldReview.apply(this,arguments);
+   if(decision==='Accept'){
+    const req=requests().find(r=>String(r.id)===String(reqId));
+    const app=req&&(req.applications||[]).find(a=>String(a.id)===String(appId));
+    if(req&&app)dedupeRequestRows(req.id,app.userId);
+   }
+   return result;
+  };wrapped.__v159=true;window.reviewStaffApplication=wrapped;
+ }
+ // Keep all existing render entry points, but refresh them after the central resolver loads.
+ try{if(typeof window.renderStaffCalendar==='function')window.renderStaffCalendar();}catch(e){console.warn('Crew schedule refresh',e);}
+})();
+</script>
 
 </body>
 <script>
@@ -4209,18 +4309,10 @@ function noteFor(userId,k){
  const rangeNote=rows().find(r=>String(r.userId)===String(userId)&&r.startDate<=k&&r.endDate>=k&&['Unavailable','Holiday'].includes(r.kind)&&String(r.note||'').trim());
  return rangeNote?.note||'';
 }
-function accepted(row){
- if(!row||row.kind!=='Shift'||!row.requestId)return false;
- const req=(data.staffRequests||[]).find(r=>String(r.id)===String(row.requestId));
- return !!req&&(req.applications||[]).some(a=>String(a.userId)===String(row.userId)&&a.status==='Accepted');
-}
+function accepted(row){return !!(window.BackstageCrewScheduleV159&&window.BackstageCrewScheduleV159.isBookedRow(row));}
 function stateFor(p,k){
- const dayRows=rows().filter(r=>String(r.userId)===String(p.id)&&r.startDate<=k&&r.endDate>=k);
- if(dayRows.some(accepted))return 'working';
- if(dayRows.some(r=>['Unavailable','Holiday','Day Off'].includes(r.kind)))return 'unavailable';
- if(dayRows.some(r=>r.kind==='Available'))return 'working';
- const wd=fromKey(k).getDay();
- return employment(p)==='Regular Crew'&&wd>=1&&wd<=5?'working':'none';
+ const state=window.BackstageCrewScheduleV159?window.BackstageCrewScheduleV159.stateFor(p,k):'none';
+ return state==='available'?'working':state==='booked'?'working':state;
 }
 function visibleDates(){
  let start=new Date(anchor),n=1;
