@@ -66,6 +66,8 @@ async function cloudLoad(){
    else setCloudSyncState('synced');
  }else{
    const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
+   applyCraigCloudIdentityMerge(clean);
+   applyCraigCloudIdentityMerge(data);
    const localScore=cloudDataScore(data),remoteScore=cloudDataScore(clean);
    const last=localStorage.getItem('regency_cloud_last_sync');
    const remoteNewer=Date.parse(row.updated_at||0)>Date.parse(last||0);
@@ -99,7 +101,7 @@ function cleanupPortalooEventMirrors(){
 }
 
 function normalizeDataShape(){
- data=data||{};data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];data.tasks=Array.isArray(data.tasks)?data.tasks:[];data.users=data.users||[];data.vans=data.vans||[];data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.marqueeJobs=data.marqueeJobs||[];data.events=data.events||[];cleanupPortalooEventMirrors();data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId&&u.role!=='director')u.cloudOnly=true});data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.hsCloud=data.hsCloud||{documents:[],videos:[]};data.hsCloud.documents=Array.isArray(data.hsCloud.documents)?data.hsCloud.documents:[];data.hsCloud.videos=Array.isArray(data.hsCloud.videos)?data.hsCloud.videos:[];normalizeStockInventory();data.events.forEach(ensureEventShape);
+ data=data||{};data.items=data.items||[];data.jobs=data.jobs||[];data.history=data.history||[];data.tasks=Array.isArray(data.tasks)?data.tasks:[];data.users=data.users||[];data.vans=data.vans||[];data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.marqueeJobs=data.marqueeJobs||[];data.events=data.events||[];cleanupPortalooEventMirrors();data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId && u.role!=='director')u.cloudOnly=true});data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.hsCloud=data.hsCloud||{documents:[],videos:[]};data.hsCloud.documents=Array.isArray(data.hsCloud.documents)?data.hsCloud.documents:[];data.hsCloud.videos=Array.isArray(data.hsCloud.videos)?data.hsCloud.videos:[];normalizeStockInventory();data.events.forEach(ensureEventShape);
 }
 normalizeDataShape();
 try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}
@@ -147,8 +149,8 @@ function scheduleCloudPush(){if(!cloudIsReady()||cloudApplying)return;cloudDirty
 async function initCloud(){
  if(!supabaseClient)return;
  try{const {data:{session},error}=await supabaseClient.auth.getSession();if(error)throw error;cloudSession=session;setCloudHeader();
-   supabaseClient.auth.onAuthStateChange((_event,session)=>{cloudSession=session;setCloudHeader();setTimeout(async()=>{if(cloudSession){await ensureCloudCrew();subscribeCloud();await cloudLoad();await ensureCloudCrew();await cloudPush();}else if(cloudChannel){await supabaseClient.removeChannel(cloudChannel);cloudChannel=null;setCloudSyncState('idle');}},0)});
-   if(cloudSession){await ensureCloudCrew();subscribeCloud();await cloudLoad();await ensureCloudCrew();await cloudPush();}
+   supabaseClient.auth.onAuthStateChange((_event,session)=>{cloudSession=session;setCloudHeader();setTimeout(async()=>{if(cloudSession){await ensureCloudCrew();subscribeCloud();await cloudLoad();}else if(cloudChannel){await supabaseClient.removeChannel(cloudChannel);cloudChannel=null;setCloudSyncState('idle');}},0)});
+   if(cloudSession){await ensureCloudCrew();subscribeCloud();await cloudLoad();}
  }catch(e){console.error('Cloud init failed',e);setCloudSyncState('error',e?.message||String(e))}
 }
 function subscribeCloud(){
@@ -159,6 +161,8 @@ function subscribeCloud(){
      if(payload.new?.updated_by===cloudSession?.user?.id)return;
      const remote=payload.new?.state;if(!remote?._cloudInitialized)return;
      const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
+   applyCraigCloudIdentityMerge(clean);
+   applyCraigCloudIdentityMerge(data);
      if(cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudPush();}
      else{cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;localStorage.setItem('regency_cloud_last_sync',payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);}
    })
@@ -166,24 +170,28 @@ function subscribeCloud(){
 }
 window.addEventListener('online',()=>{if(cloudIsReady()){if(cloudDirty)cloudPush();else cloudLoad()}});
 window.addEventListener('focus',()=>{if(cloudIsReady()&&!cloudDirty)cloudLoad()});
+function applyCraigCloudIdentityMerge(target){
+ if(!target || !Array.isArray(target.users))return false;
+ const loginId='83f4767c-6352-4fd3-9f4c-81fce5f620e6';
+ const directorId='user-muq3mz6d-c8ci';
+ const obsoleteId='user-muswqovk-11ld';
+ const craig=target.users.find(u=>String(u.id)===directorId);
+ if(!craig)return false;
+ const oldIndex=target.users.findIndex(u=>String(u.id)===obsoleteId);
+ const old=oldIndex>=0?target.users[oldIndex]:null;
+ // Only transfer the known Cloud Login identity. Preserve Craig's Director data and permissions.
+ if(old){
+   if(old.authUserId===loginId || !craig.authUserId) craig.authUserId=loginId;
+   if(!craig.email && old.email) craig.email=old.email;
+   target.users.splice(oldIndex,1);
+ }
+ if(craig.authUserId===loginId)delete craig.cloudOnly;
+ return !!old || craig.authUserId===loginId;
+}
 async function ensureCloudCrew(){
  if(!cloudSession)return;
- const loginId=cloudSession.user.id;
- const director=data.users.find(u=>u.id==='user-muq3mz6d-c8ci'&&normalizeRole(u.role)==='director');
- const legacy=data.users.find(u=>u.id==='user-muswqovk-11ld'&&u.authUserId===loginId);
- if(director&&legacy){
-   // Preserve Craig's Director profile as canonical; only transfer missing login fields.
-   if(!director.authUserId)director.authUserId=loginId;
-   if(!director.email&&legacy.email)director.email=legacy.email;
-   director.loginEnabled=director.loginEnabled!==false;
-   director.cloudOnly=false;
-   data.users=data.users.filter(u=>u.id!=='user-muswqovk-11ld');
- }else if(director&&director.authUserId===loginId){
-   director.cloudOnly=false;
-   data.users=data.users.filter(u=>!(u.id==='user-muswqovk-11ld'&&u.cloudOnly));
- }else{
-   data.users.forEach(u=>{if(u.authUserId===loginId&&normalizeRole(u.role)!=='director')u.cloudOnly=true;});
- }
+ // This account is the Director profile, not a separate cloud-only crew profile.
+ applyCraigCloudIdentityMerge(data);
  localStorage.removeItem('regency_current_auth_user');
  localStorage.setItem(KEY,JSON.stringify(data));
 }
@@ -200,7 +208,7 @@ async function cloudSignUp(){const email=v('cloud_email'),password=v('cloud_pass
 async function cloudLogout(){if(!supabaseClient)return;await supabaseClient.auth.signOut();localStorage.removeItem('regency_current_auth_user');setCloudHeader();render();}
 function cloudLoginRequired(){return !!cloudSession}
 
-data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId&&u.role!=='director')u.cloudOnly=true});
+data.portalooJobs=data.portalooJobs||[];data.portalooEquipment=data.portalooEquipment||[];data.furnitureProps=data.furnitureProps||[];data.powerEquipment=data.powerEquipment||[];data.marqueeEquipment=data.marqueeEquipment||[];data.settings=data.settings||{requireCrewLogin:false};data.settings.showClosedEventJobs=data.settings.showClosedEventJobs!==false;data.settings.showClosedPortalooJobs=data.settings.showClosedPortalooJobs!==false;data.users.forEach(u=>{u.role=normalizeRole(u.role);if(u.loginEnabled===undefined)u.loginEnabled=true;if(u.authUserId && u.role!=='director')u.cloudOnly=true});
 function normalizeStockInventory(){[data.portalooEquipment,data.furnitureProps,data.powerEquipment,data.marqueeEquipment].forEach(arr=>(arr||[]).forEach(x=>{x.totalQty=Math.max(1,Number(x.totalQty)||1);x.allocations=Array.isArray(x.allocations)?x.allocations:[];if(x.jobId&&!x.allocations.some(a=>a.jobId===x.jobId)){x.allocations.push({jobId:x.jobId,qty:1});}if(x.status==='Out'&&!x.allocations.length&&x.totalQty===1)x.allocations.push({jobId:x.jobId||'legacy',qty:1});const used=x.allocations.reduce((n,a)=>n+(Number(a.qty)||0),0);x.availableQty=Math.max(0,x.totalQty-used);x.status=x.availableQty>0?'Available':'Out';x.jobId=x.allocations.length===1?x.allocations[0].jobId:null;}));}
 function stockUsed(x){return (x.allocations||[]).reduce((n,a)=>n+(Number(a.qty)||0),0)}
 function stockAvailable(x){return Math.max(0,(Number(x.totalQty)||1)-stockUsed(x))}
