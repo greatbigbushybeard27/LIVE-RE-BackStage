@@ -41,7 +41,7 @@ function cloudLastSyncText(){return localStorage.getItem('regency_cloud_last_syn
 function setCloudSyncState(state,error=''){cloudSyncState=state;cloudLastError=error||'';setCloudHeader();const el=document.getElementById('cloudSyncState');if(el){el.textContent=state==='syncing'?'Syncing…':state==='error'?'Sync error':state==='synced'?'Synced':'Ready';el.className='badge '+(state==='error'?'danger':'')}const err=document.getElementById('cloudSyncError');if(err)err.textContent=cloudLastError?`Cloud error: ${cloudLastError}`:''}
 function setCloudHeader(){const el=document.getElementById('headerCloud');if(!el)return;const connected=!!cloudSession;el.innerHTML=`<span class="cloud-dot ${connected?'connected':'offline'}"></span>${connected?'Connected':'Offline'}`}
 function hasUsefulLocalData(){return (data.items?.length||data.jobs?.length||data.events?.length||data.portalooJobs?.length||data.portalooEquipment?.length||data.furnitureProps?.length||data.vans?.length||data.users?.length||data.history?.length||data.tasks?.length||data.hours?.length)>0}
-function cloudStatePayload(){normalizeStockInventory();return JSON.parse(JSON.stringify({...data,_cloudInitialized:true,_cloudSavedAt:new Date().toISOString()}))}
+function cloudStatePayload(){applyCraigCloudIdentityMerge(data);normalizeDataShape();normalizeStockInventory();return JSON.parse(JSON.stringify({...data,_cloudInitialized:true,_cloudSavedAt:new Date().toISOString()}))}
 function cloudDataScore(d){if(!d)return 0;return (d.items?.length||0)+(d.jobs?.length||0)+(d.events?.length||0)+(d.portalooJobs?.length||0)+(d.portalooEquipment?.length||0)+(d.furnitureProps?.length||0)+(d.powerEquipment?.length||0)+(d.marqueeEquipment?.length||0)+(d.vans?.length||0)+(d.users?.length||0)+(d.history?.length||0)+(d.tasks?.length||0)+(d.hours?.length||0)+(d.hsCloud?.documents?.length||0)+(d.hsCloud?.videos?.length||0)}
 function mergeCloudCollection(localArr,remoteArr){
   if(!Array.isArray(localArr))localArr=[];if(!Array.isArray(remoteArr))return localArr;
@@ -61,11 +61,14 @@ async function cloudLoad(){
  const row=await cloudFetchRemote();
  if(!row){if(hasUsefulLocalData())await cloudPush();else setCloudSyncState('synced');return;}
  const remote=row.state;
+ let remoteIdentityChanged=false,localIdentityChanged=false;
  if(!remote?._cloudInitialized){
    if(hasUsefulLocalData()) await cloudPush();
    else setCloudSyncState('synced');
  }else{
    const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
+   remoteIdentityChanged=applyCraigCloudIdentityMerge(clean);
+   localIdentityChanged=applyCraigCloudIdentityMerge(data);
    applyCraigCloudIdentityMerge(clean);
    applyCraigCloudIdentityMerge(data);
    const localScore=cloudDataScore(data),remoteScore=cloudDataScore(clean);
@@ -77,6 +80,7 @@ async function cloudLoad(){
    else if(remoteNewer && cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;await cloudPush();}
    else if(localScore>remoteScore && !cloudDirty){await cloudPush();}
  }
+ if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;await cloudPush();}
  setCloudHeader();render();setTimeout(()=>syncCloudHSIndex().then(()=>syncLocalHSToCloud()).catch(e=>console.error(e)),120);
 }
 function cleanupPortalooEventMirrors(){
@@ -133,7 +137,7 @@ async function cloudUploadThisDevice(){
 async function cloudDownloadFromCloud(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
  if(!confirm('Download the shared company data from the Regency cloud to this device? Any unsynced local changes on this device will be replaced.'))return;
- try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudDirty=false;localStorage.setItem('regency_cloud_last_sync',row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
+ try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;const identityChanged=applyCraigCloudIdentityMerge(clean);cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudDirty=false;localStorage.setItem('regency_cloud_last_sync',row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();if(identityChanged){cloudDirty=true;await cloudPush();}alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
 }
 async function cloudSyncNow(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
@@ -161,10 +165,12 @@ function subscribeCloud(){
      if(payload.new?.updated_by===cloudSession?.user?.id)return;
      const remote=payload.new?.state;if(!remote?._cloudInitialized)return;
      const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
+     const remoteIdentityChanged=applyCraigCloudIdentityMerge(clean);
+     const localIdentityChanged=applyCraigCloudIdentityMerge(data);
    applyCraigCloudIdentityMerge(clean);
    applyCraigCloudIdentityMerge(data);
      if(cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudPush();}
-     else{cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;localStorage.setItem('regency_cloud_last_sync',payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);}
+     else{cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;localStorage.setItem('regency_cloud_last_sync',payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;cloudPush();}}
    })
    .subscribe(status=>{if(status==='SUBSCRIBED')setCloudSyncState(cloudDirty?'syncing':'synced');else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setCloudSyncState('error','Realtime connection could not be established. The app will retry on reconnect.');});
 }
@@ -179,15 +185,20 @@ function applyCraigCloudIdentityMerge(target){
  if(!craig)return false;
  const oldIndex=target.users.findIndex(u=>String(u.id)===obsoleteId);
  const old=oldIndex>=0?target.users[oldIndex]:null;
- // Only transfer the known Cloud Login identity. Preserve Craig's Director data and permissions.
+ let changed=false;
+ // Never delete either profile if an unexpected, different Auth identity is present.
+ if(old && ((old.authUserId && old.authUserId!==loginId) || (craig.authUserId && craig.authUserId!==loginId)))return false;
  if(old){
-   if(old.authUserId===loginId || !craig.authUserId) craig.authUserId=loginId;
-   if(!craig.email && old.email) craig.email=old.email;
-   target.users.splice(oldIndex,1);
+   if(old.authUserId===loginId || !craig.authUserId){
+     if(craig.authUserId!==loginId){craig.authUserId=loginId;changed=true;}
+   }
+   if(!craig.email && old.email){craig.email=old.email;changed=true;}
+   target.users.splice(oldIndex,1);changed=true;
  }
- if(craig.authUserId===loginId)delete craig.cloudOnly;
- return !!old || craig.authUserId===loginId;
+ if(craig.authUserId===loginId && Object.prototype.hasOwnProperty.call(craig,'cloudOnly')){delete craig.cloudOnly;changed=true;}
+ return changed;
 }
+
 async function ensureCloudCrew(){
  if(!cloudSession)return;
  // This account is the Director profile, not a separate cloud-only crew profile.
