@@ -1116,7 +1116,7 @@ data.items.forEach(i=>{
 data.vans.forEach(vn=>{if(vn.photo===undefined)vn.photo=''});
 let scanner=null;
 const progressSteps=['Picked','Loaded','Delivered','Setup','On Job','Returned'];
-function crewUsers(){return data.users.filter(u=>!u.cloudOnly&&!u.authUserId)}
+function crewUsers(){const activeUser=currentUser();return data.users.filter(u=>!u.cloudOnly&&(!u.authUserId||(activeUser&&String(u.id)===String(activeUser.id))))}
 function normalizeRole(role){const r=String(role||'crew').toLowerCase().replace(/[- ]/g,'_');if(r==='admin'||r==='director')return 'director';if(r==='manager'||r==='senior'||r==='seniorcrew'||r==='senior_crew')return 'seniorCrew';return 'crew'}
 function roleLabel(role){const r=normalizeRole(role);return r==='director'?'Director':r==='seniorCrew'?'Senior Crew':'Crew'}
 function isDirector(){return normalizeRole(currentUser()?.role)==='director'}
