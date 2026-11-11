@@ -962,8 +962,8 @@ async function cloudPush(){
  // Capture one stable payload. A concurrent edit during this request remains dirty
  // and will be sent separately against the revision returned by this save.
  const mutationAtStart=cloudMutationVersion;
- const payload=cloudStatePayload();
  try{
+   const payload=cloudStatePayload();
    const {data:savedAt,error}=await supabaseClient.rpc('backstage_save_regency_state_v1',{
      p_org_id:REGENCY_ORG_ID,
      p_state:payload,
