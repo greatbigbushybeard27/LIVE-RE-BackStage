@@ -720,6 +720,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 @media(max-width:900px){#backstageMenuButton{top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;width:48px!important;height:48px!important;} }
 </style>
 
+<meta name="backstage-build" content="V71.73-iOS-STORAGE-QUOTA-AND-CLOSED-JOBS-FIX">
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -789,6 +790,12 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 <script>
 const KEY='avtracker_v1';
 let data;
+// V71.73: local storage can be full on iOS. Keep the live app usable and allow
+// cloud sync to continue even when the browser refuses to cache the main state.
+let mainDataStorageAvailable=true;
+function safeLocalStorageSet(key,value){try{localStorage.setItem(key,value);return true}catch(error){if(error?.name==='QuotaExceededError'||error?.name==='NS_ERROR_DOM_QUOTA_REACHED'||/quota|storage/i.test(String(error?.message||''))){mainDataStorageAvailable=false;console.warn('Backstage local storage quota reached; keeping current data in memory and using cloud sync where available.',error);return false}console.warn('Backstage local storage write failed:',error);return false}}
+function persistMainData(){try{normalizeStockInventory();const ok=safeLocalStorageSet(KEY,JSON.stringify(data));if(ok)mainDataStorageAvailable=true;return ok}catch(error){console.warn('Backstage could not prepare local data for storage:',error);mainDataStorageAvailable=false;return false}}
+function persistCloudSyncStamp(value){return safeLocalStorageSet('regency_cloud_last_sync',value)}
 function ensureWageSettings(u){if(!u)return;u.wageSettings=u.wageSettings||{};const w=u.wageSettings;w.standardRate=Number.isFinite(Number(w.standardRate))&&Number(w.standardRate)>0?Number(w.standardRate):15;w.enhanced1Rate=Number.isFinite(Number(w.enhanced1Rate))&&Number(w.enhanced1Rate)>0?Number(w.enhanced1Rate):w.standardRate;w.enhanced2Rate=Number.isFinite(Number(w.enhanced2Rate))&&Number(w.enhanced2Rate)>0?Number(w.enhanced2Rate):w.standardRate;w.taxPercent=Math.max(0,Math.min(100,Number.isFinite(Number(w.taxPercent))?Number(w.taxPercent):0));return w}
 
 // Shared V51/fleet helpers live in the primary app scope because the main renderers
@@ -906,10 +913,10 @@ async function cloudLoad(){
    const localScore=cloudDataScore(data),remoteScore=cloudDataScore(clean);
    const last=localStorage.getItem('regency_cloud_last_sync');
    const remoteNewer=Date.parse(row.updated_at||0)>Date.parse(last||0);
-   if(localScore===0){cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudDirty=false;localStorage.setItem('regency_cloud_last_sync',row.updated_at||new Date().toISOString());}
+   if(localScore===0){cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;persistCloudSyncStamp(row.updated_at||new Date().toISOString());}
    else if(!last && localScore>remoteScore){await cloudPush();}
-   else if(remoteNewer && !cloudDirty){cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudDirty=false;localStorage.setItem('regency_cloud_last_sync',row.updated_at||new Date().toISOString());setCloudSyncState('synced');}
-   else if(remoteNewer && cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;await cloudPush();}
+   else if(remoteNewer && !cloudDirty){cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;persistCloudSyncStamp(row.updated_at||new Date().toISOString());setCloudSyncState('synced');}
+   else if(remoteNewer && cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();persistMainData();cloudApplying=false;await cloudPush();}
    else if(localScore>remoteScore && !cloudDirty){await cloudPush();}
  }
  if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;await cloudPush();}
@@ -942,13 +949,16 @@ function normalizeDataShape(){
 async function cloudPush(){
  if(!cloudIsReady()||cloudApplying)return false;
  setCloudSyncState('syncing');
- normalizeStockInventory();localStorage.setItem(KEY,JSON.stringify(data));
- const payload=cloudStatePayload();
- const now=new Date().toISOString();
  try{
+   // Local cache writes are best-effort only. They must never block a cloud upload.
+   persistMainData();
+   const payload=cloudStatePayload();
+   const now=new Date().toISOString();
    const {error}=await supabaseClient.from('regency_state').upsert({org_id:REGENCY_ORG_ID,state:payload,updated_at:now,updated_by:cloudSession.user.id},{onConflict:'org_id'});
    if(error)throw error;
-   cloudDirty=false;cloudLastError='';localStorage.setItem('regency_cloud_last_sync',now);setCloudSyncState('synced');setCloudHeader();return true;
+   cloudDirty=false;cloudLastError='';persistCloudSyncStamp(now);setCloudSyncState('synced');setCloudHeader();
+   if(!mainDataStorageAvailable)console.warn('Cloud sync succeeded, but this device could not save its local offline cache because browser storage is full.');
+   return true;
  }catch(e){console.error('Cloud save failed',e);cloudDirty=true;setCloudSyncState('error',e?.message||String(e));return false}
 }
 async function cloudUploadThisDevice(){
@@ -959,7 +969,7 @@ async function cloudUploadThisDevice(){
 async function cloudDownloadFromCloud(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
  if(!confirm('Download the shared company data from the Regency cloud to this device? Any unsynced local changes on this device will be replaced.'))return;
- try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;const identityChanged=applyCraigCloudIdentityMerge(clean);cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudDirty=false;localStorage.setItem('regency_cloud_last_sync',row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();if(identityChanged){cloudDirty=true;await cloudPush();}alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
+ try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;const identityChanged=applyCraigCloudIdentityMerge(clean);cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;persistCloudSyncStamp(row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();if(identityChanged){cloudDirty=true;await cloudPush();}alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
 }
 async function cloudSyncNow(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
@@ -989,8 +999,8 @@ function subscribeCloud(){
      const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
      const remoteIdentityChanged=applyCraigCloudIdentityMerge(clean);
      const localIdentityChanged=applyCraigCloudIdentityMerge(data);
-     if(cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;cloudPush();}
-     else{cloudApplying=true;data=clean;normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));cloudApplying=false;localStorage.setItem('regency_cloud_last_sync',payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;cloudPush();}}
+     if(cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();persistMainData();cloudApplying=false;cloudPush();}
+     else{cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;persistCloudSyncStamp(payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;cloudPush();}}
    })
    .subscribe(status=>{if(status==='SUBSCRIBED')setCloudSyncState(cloudDirty?'syncing':'synced');else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setCloudSyncState('error','Realtime connection could not be established. The app will retry on reconnect.');});
 }
@@ -1029,7 +1039,7 @@ async function ensureCloudCrew(){
    }
  });
  normalizeDataShape();
- localStorage.removeItem('regency_current_auth_user');localStorage.setItem(KEY,JSON.stringify(data));
+ localStorage.removeItem('regency_current_auth_user');persistMainData();
 }
 function cloudAuthModal(){
  if(cloudSession){
@@ -1151,7 +1161,7 @@ function showLoginOverlay(){let box=document.getElementById('crewLoginOverlay');
 
 async function doCrewLogin(){const uid=v('login_user'),pin=v('login_pin');const u=data.users.find(x=>x.id===uid);if(!u||!pin)return;const hash=await sha256Hex(pin);if(hash!==u.pinHash){document.getElementById('login_msg').textContent='Incorrect PIN.';return}localStorage.setItem('regency_current_user',u.id);logActivity({itemName:u.name,action:'Logged in',at:new Date().toISOString()});document.getElementById('crewLoginOverlay')?.remove();render();}
 function crewLogout(){const u=currentUser();if(u)logActivity({itemName:u.name,action:'Logged out',at:new Date().toISOString()});localStorage.removeItem('regency_current_user');render();if(isLoginRequired())showLoginOverlay()}
-function save(){normalizeStockInventory();localStorage.setItem(KEY,JSON.stringify(data));if(cloudIsReady())cloudDirty=true;scheduleCloudPush()}
+function save(){persistMainData();if(cloudIsReady())cloudDirty=true;scheduleCloudPush();return mainDataStorageAvailable}
 
 // Job documents are stored in IndexedDB so PDFs and other files do not consume localStorage quota.
 const DOC_DB='avtracker_job_documents_v1';
@@ -2537,7 +2547,7 @@ function eventStatusBadge(status){const s=String(status||'Not Started');return `
 function eventStatusFillClass(status){return `event-progress-fill status-${eventStatusClass(status)}`}
 
 function eventSectionLabel(k){return {marquee:'⛺ Marquee',portaloo:"<img class='portaloo-icon' src='portaloo-icon.svg' alt=''> Portaloos & Toilet Trailers",power:'⚡ Power & Distro',furniture:'🪑 Furniture & Props',paChillers:'🚚 PA Caravans & Chillers'}[k]||k;}
-function toggleClosedEventJobs(){data.settings.showClosedEventJobs=data.settings.showClosedEventJobs===false;save();renderEvents()}
+function toggleClosedEventJobs(){data.settings=data.settings||{};data.settings.showClosedEventJobs=data.settings.showClosedEventJobs===false;save();renderEvents();if(!mainDataStorageAvailable)console.warn('Closed Jobs visibility changed in memory; local storage is full. Cloud sync will save it when connected.')}
 function renderEvents(){
   const el=document.getElementById('events');if(!el)return;refreshAllEventStatuses();
   const jobs=arr(data.events).slice().sort((a,b)=>{const ad=a.date||'9999-12-31',bd=b.date||'9999-12-31';return ad.localeCompare(bd)||String(a.name||'').localeCompare(String(b.name||''))});
@@ -2574,7 +2584,7 @@ function refreshEventOverallStatus(e){
  e.status=overall;e.progress=overall;return overall;
 }
 function setEventCategoryStatus(id,k,status){const e=data.events.find(x=>x.id===id);if(!e)return;const keys=eventCategoryKeys(e);if(!keys.includes(k))return;e.categoryStatuses=e.categoryStatuses||{};e.categoryStatuses[k]=status;const overall=refreshEventOverallStatus(e);logActivity({itemName:e.name,action:'Category status changed',job:e.name,progress:`${eventCategoryLabel(k).replace(/<[^>]+>/g,'')} → ${status}`,at:new Date().toISOString()});const j=data.jobs.find(x=>x.id===e.avJobId);if(j){j.progress=overall;j.status=overall==='Closed'?'Complete':overall==='Complete'?'Complete':'Open';}save();viewEventJob(id);renderEvents();if(googleAccessToken)syncGoogleEvent(e)}
-function refreshAllEventStatuses(){let changed=false;(data.events||[]).forEach(e=>{const before=e.status;const beforeCats=JSON.stringify(e.categoryStatuses||{});refreshEventOverallStatus(e);if(before!==e.status||beforeCats!==JSON.stringify(e.categoryStatuses||{}))changed=true});if(changed){localStorage.setItem(KEY,JSON.stringify(data));scheduleCloudPush();}}
+function refreshAllEventStatuses(){let changed=false;(data.events||[]).forEach(e=>{const before=e.status;const beforeCats=JSON.stringify(e.categoryStatuses||{});refreshEventOverallStatus(e);if(before!==e.status||beforeCats!==JSON.stringify(e.categoryStatuses||{}))changed=true});if(changed){persistMainData();scheduleCloudPush();}}
 
 function newEventJob(){openModal(`<h2>New Event Job</h2><label>Event / job name</label><input id="e_name" placeholder="Smith Wedding"><label>Event date</label><input id="e_date" type="date" value="${new Date().toISOString().slice(0,10)}"><label>Onsite date</label><input id="e_onsite_date" type="date"><label>End date</label><input id="e_end_date" type="date" value="${new Date().toISOString().slice(0,10)}"><label>What3words location</label><input id="e_w3w" placeholder="///filled.count.soap"><div style="display:flex;gap:8px"><button class="maps-btn" style="flex:1" type="button" onclick="openWhat3WordsFor('e_w3w')">📍 Open in What3words</button><button class="secondary" type="button" onclick="openWhat3WordsAppFor('e_w3w')">🔎 Find</button></div><h3>Customer</h3><label>Name / company</label><input id="e_customer" placeholder="Customer / company"><label>Phone</label><input id="e_phone"><label>Email</label><input id="e_email" type="email"><label>Job photo</label><input class="photo-input" id="e_photo" type="file" accept="image/*"><h3>Crew</h3><label class="multi-row"><input type="checkbox" style="width:22px;height:22px;margin:0" onchange="toggleAllCrew('new-event-user',this.checked)"><span><b>Assign all crew</b></span></label><div class="multi-list">${crewUsers().length?crewUsers().map(u=>`<label class="multi-row"><input class="new-event-user" type="checkbox" value="${u.id}"><span>${esc(u.name)}</span></label>`).join(''):'<div class="muted">No crew members added yet.</div>'}</div><h3>Vehicles</h3><div class="multi-list">${data.vans.length?data.vans.map(vn=>`<label class="multi-row"><input class="new-event-van" type="checkbox" value="${vn.id}"><span>${esc(vn.name)}</span></label>`).join(''):'<div class="muted">No vans added yet.</div>'}</div><label>General notes</label><textarea id="e_notes" rows="4" style="width:100%;padding:11px;border:1px solid #d1d5db;border-radius:9px;font:inherit"></textarea><button onclick="addEventJob()">Create event job</button>`);}
 async function addEventJob(){const name=v('e_name');if(!name)return alert('Enter an event or job name.');if(v('e_end_date')&&v('e_date')&&v('e_end_date')<v('e_date'))return alert('The end date must be on or after the start date.');const photo=await photoFromInput('e_photo');const userIds=[...document.querySelectorAll('.new-event-user:checked')].map(x=>x.value),vanIds=[...document.querySelectorAll('.new-event-van:checked')].map(x=>x.value);const avId=makeId('job');const av={id:avId,name,date:v('e_date'),onsiteDate:v('e_onsite_date'),endDate:v('e_end_date')||v('e_date'),what3words:v('e_w3w'),status:'Open',progress:'Picked',userIds,vanIds,photo};data.jobs.push(av);const e=ensureEventShape({id:makeId('event'),name,date:v('e_date'),onsiteDate:v('e_onsite_date'),endDate:v('e_end_date')||v('e_date'),what3words:v('e_w3w'),status:'Booked',progress:'Booked',userIds,vanIds,photo,notes:v('e_notes'),customer:{name:v('e_customer'),company:'',phone:v('e_phone'),email:v('e_email')},avJobId:avId,sections:{marquee:[],portaloo:[],av:[],power:[],furniture:[],paChillers:[]}});data.events.push(e);save();closeModal();showPage('events');if(googleAccessToken)syncGoogleEvent(e);}
@@ -2938,7 +2948,7 @@ async function startScan(){stopScan();if(!window.Html5Qrcode){alert('QR scanner 
 function stopScan(){if(scanner){scanner.stop().catch(()=>{});scanner.clear().catch(()=>{});scanner=null}}
 window.addEventListener('error',e=>console.error('Backstage error:',e.message));
 setInterval(()=>{if(!document.getElementById('dashboard')?.classList.contains('hidden'))loadDashboardWeather()},600000);
-normalizeDataShape();localStorage.setItem(KEY,JSON.stringify(data));render();
+normalizeDataShape();persistMainData();render();
 initCloud().then(()=>{if(!loggedIn())setTimeout(showLoginOverlay,250);}).catch(e=>{console.error('Cloud init failed',e);if(!loggedIn())setTimeout(showLoginOverlay,250);});
 setTimeout(updateGoogleSyncUI,300);
 /* Crew profile navigation is handled directly by the header button's inline click action. */
