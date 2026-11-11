@@ -707,6 +707,19 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 <style id="v731CrewTypeSelectStyle">
 .crew-type-select{background:#102219!important;color:var(--regency-text)!important;border:1px solid #587463!important;border-radius:8px!important;padding:10px!important;min-width:145px}
 </style>
+
+<style id="v71-72-ios-touch-fix">
+/* V71.72: iOS Home Screen PWA safe-area and reliable touch targets. */
+#backstageMenuButton{position:fixed!important;top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;z-index:2147483000!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;isolation:isolate!important;min-width:48px!important;min-height:48px!important;}
+#backstageMenuOverlay{z-index:2147482000!important;touch-action:pan-y!important;}
+#backstageMenuDrawer{z-index:2147482500!important;padding-top:calc(env(safe-area-inset-top, 0px) + 18px)!important;-webkit-overflow-scrolling:touch!important;touch-action:pan-y!important;}
+#backstageMenuButton:active{transform:scale(.96);}
+.closed-toggle-btn{position:relative!important;z-index:20!important;pointer-events:auto!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;min-height:44px!important;}
+.completed-heading{position:relative!important;isolation:isolate!important;}
+.completed-heading .closed-toggle-btn{flex:0 0 auto!important;}
+@media(max-width:900px){#backstageMenuButton{top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;width:48px!important;height:48px!important;} }
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
