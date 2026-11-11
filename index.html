@@ -720,7 +720,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 @media(max-width:900px){#backstageMenuButton{top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;width:48px!important;height:48px!important;} }
 </style>
 
-<meta name="backstage-build" content="V71.76.1-CLOUD-SYNC-CONFLICT-GUARD">
+<meta name="backstage-build" content="V71.76.2-CLOUD-SYNC-CONFLICT-GUARD">
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -875,7 +875,7 @@ const supabaseClient=window.supabase?.createClient(SUPABASE_URL,SUPABASE_PUBLISH
  auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
 });
 let cloudSession=null, cloudSyncTimer=null, cloudApplying=false, cloudChannel=null;
-let cloudDirty=false, cloudSyncState='idle', cloudLastError='';
+let cloudDirty=false, cloudSyncState='idle', cloudLastError='', cloudVersion=null, cloudConflict=false, cloudPushInFlight=false, cloudMutationVersion=0;
 function cloudIsReady(){return !!(supabaseClient&&cloudSession)}
 function cloudStatusText(){return cloudSession?'Connected':'Not connected'}
 function cloudLastSyncText(){return localStorage.getItem('regency_cloud_last_sync')||'Not synced on this device yet'}
@@ -898,30 +898,35 @@ function mergeCloudData(local,remote){
 async function cloudFetchRemote(){if(!cloudIsReady())return null;const {data:row,error}=await supabaseClient.from('regency_state').select('state,updated_at,updated_by').eq('org_id',REGENCY_ORG_ID).maybeSingle();if(error){console.error('Cloud fetch failed',error);setCloudSyncState('error',error.message);return null}return row||null}
 async function cloudLoad(){
  if(!cloudIsReady())return;
+ if(cloudDirty){setCloudSyncState('error','This device has unsynced changes. Sync is paused until the shared version is checked.');return;}
  setCloudSyncState('syncing');
  const row=await cloudFetchRemote();
- // A missing or uninitialised server record is a hard stop. A phone must never
- // bootstrap/replace the company save merely because its local copy is empty or newer.
- if(!row){setCloudSyncState('error','No shared company save was found. Local data has been left untouched; ask a Director to check the cloud setup.');return;}
- const remote=row.state;
- if(!remote?._cloudInitialized){setCloudSyncState('error','The shared company save is not initialised. No device data has been uploaded or changed.');return;}
- const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
+ if(!row){setCloudSyncState('error','Could not read the shared company save. No local or cloud data was changed.');return;}
+ if(!row.state?._cloudInitialized){setCloudSyncState('error','The shared company save is not initialised. No device data has been uploaded or changed.');return;}
+ const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;
  const last=localStorage.getItem('regency_cloud_last_sync');
- // First sync on any device is always server-to-device, never device-to-server.
- if(!last){
+ // A device without a confirmed baseline always downloads the company copy first.
+ // A clean device also adopts any newer server revision. No record-count heuristics.
+ const remoteChanged=!last || String(row.updated_at||'')!==String(last);
+ if(remoteChanged){
    applyCraigCloudIdentityMerge(clean);
-   cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;
+   cloudApplying=true;
+   data=clean;
+   normalizeDataShape();
+   persistMainData();
+   cloudApplying=false;
+   cloudDirty=false;
+   cloudConflict=false;
+   cloudVersion=row.updated_at||null;
    persistCloudSyncStamp(row.updated_at||new Date().toISOString());
  }else{
-   const remoteIdentityChanged=applyCraigCloudIdentityMerge(clean);
-   const localIdentityChanged=applyCraigCloudIdentityMerge(data);
-   const remoteNewer=Date.parse(row.updated_at||0)>Date.parse(last||0);
-   if(remoteNewer && !cloudDirty){cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;persistCloudSyncStamp(row.updated_at||new Date().toISOString());}
-   else if(remoteNewer && cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();persistMainData();cloudApplying=false;await cloudPush();}
-   else if(cloudDirty){await cloudPush();}
-   if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;await cloudPush();}
+   cloudVersion=row.updated_at||null;
+   cloudConflict=false;
  }
- setCloudHeader();render();setTimeout(()=>syncCloudHSIndex().then(()=>syncLocalHSToCloud()).catch(e=>console.error(e)),120);
+ setCloudHeader();
+ setCloudSyncState('synced');
+ render();
+ setTimeout(()=>syncCloudHSIndex().then(()=>syncLocalHSToCloud()).catch(e=>console.error(e)),120);
 }
 function cleanupPortalooEventMirrors(){
   if(!Array.isArray(data.events)||!Array.isArray(data.portalooJobs)||!data.portalooJobs.length)return;
@@ -949,43 +954,53 @@ function normalizeDataShape(){
 }
 async function cloudPush(){
  if(!cloudIsReady()||cloudApplying)return false;
+ if(cloudPushInFlight)return false;
+ if(cloudConflict){setCloudSyncState('error','A newer shared version exists. Local edits are preserved and have not been uploaded. Refresh from Cloud only after reviewing those edits.');return false;}
+ if(!cloudVersion){setCloudSyncState('error','No confirmed cloud revision is loaded on this device. Download the shared company data before saving.');return false;}
+ cloudPushInFlight=true;
  setCloudSyncState('syncing');
+ // Capture one stable payload. A concurrent edit during this request remains dirty
+ // and will be sent separately against the revision returned by this save.
+ const mutationAtStart=cloudMutationVersion;
+ const payload=cloudStatePayload();
  try{
-   // Require an established server save and a completed first download on this device.
-   // This prevents empty/new devices from ever becoming the source of the company copy.
-   if(!localStorage.getItem('regency_cloud_last_sync'))throw new Error('This device has not downloaded the shared company data yet. Download from Cloud before making changes.');
-   const guard=await cloudFetchRemote();
-   if(!guard?.state?._cloudInitialized)throw new Error('The shared company save could not be verified. Upload blocked to protect company data.');
-   if(cloudDataScore(data)===0)throw new Error('This device contains no company data. Upload blocked to protect the shared company save.');
-   // Local cache writes are best-effort only. They must never block a cloud upload.
-   persistMainData();
-   const payload=cloudStatePayload();
-   const now=new Date().toISOString();
-   const {error}=await supabaseClient.from('regency_state').upsert({org_id:REGENCY_ORG_ID,state:payload,updated_at:now,updated_by:cloudSession.user.id},{onConflict:'org_id'});
+   const {data:savedAt,error}=await supabaseClient.rpc('backstage_save_regency_state_v1',{
+     p_org_id:REGENCY_ORG_ID,
+     p_state:payload,
+     p_expected_updated_at:cloudVersion
+   });
    if(error)throw error;
-   cloudDirty=false;cloudLastError='';persistCloudSyncStamp(now);setCloudSyncState('synced');setCloudHeader();
-   if(!mainDataStorageAvailable)console.warn('Cloud sync succeeded, but this device could not save its local offline cache because browser storage is full.');
+   const revision=Array.isArray(savedAt)?savedAt[0]:savedAt;
+   if(!revision){cloudConflict=true;throw new Error('CLOUD_CONFLICT: Another device changed the shared company data. Your local edits have been kept and were not uploaded.');}
+   cloudVersion=revision;
+   cloudConflict=false;
+   cloudLastError='';
+   persistCloudSyncStamp(revision);
+   cloudDirty=cloudMutationVersion!==mutationAtStart;
+   setCloudSyncState(cloudDirty?'syncing':'synced');
+   setCloudHeader();
+   if(cloudDirty&&!cloudConflict){clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudPush(),250);}
    return true;
- }catch(e){console.error('Cloud save failed',e);cloudDirty=true;setCloudSyncState('error',e?.message||String(e));return false}
+ }catch(e){
+   console.error('Protected cloud save failed',e);
+   cloudDirty=true;
+   setCloudSyncState('error',e?.message||String(e));
+   return false;
+ }finally{cloudPushInFlight=false;}
 }
 // Whole-device replacement uploads have been deliberately removed. Normal
 // edits continue through the protected automatic sync path only.
 async function cloudDownloadFromCloud(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
  if(!confirm('Download the shared company data from the Regency cloud to this device? Any unsynced local changes on this device will be replaced.'))return;
- try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;const identityChanged=applyCraigCloudIdentityMerge(clean);cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;persistCloudSyncStamp(row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();if(identityChanged){cloudDirty=true;await cloudPush();}alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
+ try{const row=await cloudFetchRemote();if(!row?.state?._cloudInitialized)return alert('There is no company data in the cloud yet. Upload your main device first.');const clean=JSON.parse(JSON.stringify(row.state));delete clean._cloudInitialized;delete clean._cloudSavedAt;const identityChanged=applyCraigCloudIdentityMerge(clean);cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudDirty=false;cloudConflict=false;cloudVersion=row.updated_at||null;persistCloudSyncStamp(row.updated_at||new Date().toISOString());await syncCloudHSIndex();setCloudSyncState('synced');setCloudHeader();render();closeModal();if(identityChanged){cloudDirty=true;await cloudPush();}alert('Shared company data downloaded to this device.')}catch(e){console.error(e);cloudApplying=false;setCloudSyncState('error',e?.message||String(e));alert(`Cloud download failed. ${e?.message||'Check your Supabase setup.'}`)}
 }
 async function cloudSyncNow(){
  if(!cloudIsReady())return alert('Log in to Regency Cloud first.');
- const row=await cloudFetchRemote();
- if(!row?.state?._cloudInitialized){setCloudSyncState('error','No verified shared company save exists. Nothing has been uploaded.');return alert('Backstage could not verify the shared company save. No data has been uploaded or overwritten. Please contact a Director.');}
- const last=localStorage.getItem('regency_cloud_last_sync');
  if(cloudDirty)return cloudPush();
- const remoteNewer=Date.parse(row.updated_at||0)>Date.parse(last||0);
- if(remoteNewer)return cloudDownloadFromCloud();
- return cloudPush();
+ return cloudLoad();
 }
-function scheduleCloudPush(){if(!cloudIsReady()||cloudApplying)return;cloudDirty=true;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudPush(),500)}
+function scheduleCloudPush(){if(!cloudIsReady()||cloudApplying)return;cloudMutationVersion++;cloudDirty=true;clearTimeout(cloudSyncTimer);cloudSyncTimer=setTimeout(()=>cloudPush(),500)}
 async function initCloud(){
  if(!supabaseClient)return;
  try{const {data:{session},error}=await supabaseClient.auth.getSession();if(error)throw error;cloudSession=session;setCloudHeader();
@@ -993,6 +1008,7 @@ async function initCloud(){
    if(cloudSession){await ensureCloudCrew();subscribeCloud();await cloudLoad();}
  }catch(e){console.error('Cloud init failed',e);setCloudSyncState('error',e?.message||String(e))}
 }
+function setCloudStateAfterRemote(){cloudConflict=false;setCloudSyncState('synced');}
 function subscribeCloud(){
  if(!supabaseClient||!cloudSession)return;
  if(cloudChannel){supabaseClient.removeChannel(cloudChannel).catch(()=>{});cloudChannel=null;}
@@ -1003,8 +1019,8 @@ function subscribeCloud(){
      const clean=JSON.parse(JSON.stringify(remote));delete clean._cloudInitialized;delete clean._cloudSavedAt;
      const remoteIdentityChanged=applyCraigCloudIdentityMerge(clean);
      const localIdentityChanged=applyCraigCloudIdentityMerge(data);
-     if(cloudDirty){cloudApplying=true;data=mergeCloudData(data,clean);normalizeDataShape();persistMainData();cloudApplying=false;cloudPush();}
-     else{cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;persistCloudSyncStamp(payload.new?.updated_at||new Date().toISOString());setCloudSyncState('synced');render();setTimeout(()=>syncCloudHSIndex(),120);if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;cloudPush();}}
+     if(cloudDirty){cloudConflict=true;setCloudSyncState('error','Another device changed the shared company data while this device had unsynced edits. Local edits have been preserved and were not merged or uploaded.');}
+     else{cloudApplying=true;data=clean;normalizeDataShape();persistMainData();cloudApplying=false;cloudVersion=payload.new?.updated_at||cloudVersion;persistCloudSyncStamp(cloudVersion||new Date().toISOString());setCloudStateAfterRemote();render();setTimeout(()=>syncCloudHSIndex(),120);if(remoteIdentityChanged||localIdentityChanged){cloudDirty=true;cloudPush();}}
    })
    .subscribe(status=>{if(status==='SUBSCRIBED')setCloudSyncState(cloudDirty?'syncing':'synced');else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')setCloudSyncState('error','Realtime connection could not be established. The app will retry on reconnect.');});
 }
