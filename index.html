@@ -755,6 +755,23 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 .pwa-nav button.active{border-color:#168b51!important;background:#12301f!important}
 .pwa-nav button:not(.active) .nav-icon .bs-icon{color:#aebbb3!important;filter:none;transform:none}
 </style>
+
+<style id="bv134-navigation-bar-visual-repair">
+/* Preserve the original dark navigation buttons. Only the selected icon changes colour. */
+.pwa-nav{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;align-items:stretch!important;gap:4px!important;background:#050706!important;border-top:2px solid var(--regency-green)!important}
+.pwa-nav button,.pwa-nav button.active,.pwa-nav button:focus,.pwa-nav button:focus-visible{background:#090d0b!important;border:1px solid #1c2a22!important;color:#9eaaa3!important;box-shadow:none!important;outline:none!important}
+.pwa-nav button{display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;gap:3px!important;min-width:0!important;min-height:56px!important;padding:6px 2px!important;border-radius:10px!important}
+.pwa-nav .nav-icon{display:flex!important;align-items:center!important;justify-content:center!important;width:24px!important;height:24px!important;min-height:24px!important;color:#aebbb3!important;font-size:0!important;line-height:1!important;transform:none!important;filter:none!important}
+.pwa-nav .nav-icon .bs-icon{display:flex!important;align-items:center!important;justify-content:center!important;width:23px!important;height:23px!important;color:currentColor!important;transform:none!important;filter:none!important}
+.pwa-nav .nav-icon .bs-icon svg{display:block!important;width:23px!important;height:23px!important;min-width:23px!important;min-height:23px!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important;visibility:visible!important;opacity:1!important}
+.pwa-nav button.active .nav-icon,.pwa-nav button.active .nav-icon .bs-icon,.pwa-nav button.active .nav-icon .bs-icon svg{color:#00d26a!important;stroke:#00d26a!important;filter:drop-shadow(0 0 3px #00d26a55)!important}
+.pwa-nav button.active{background:#090d0b!important;border-color:#1c2a22!important;color:#9eaaa3!important}
+.pwa-nav .nav-label{display:block!important;color:#9eaaa3!important;font-size:10px!important;line-height:1.05!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;max-width:100%!important}
+.pwa-nav button.active .nav-label{color:#9eaaa3!important}
+.pwa-nav .nav-notification-badge{z-index:2!important}
+@media(max-width:430px){.pwa-nav button{font-size:9px!important}.pwa-nav .nav-label{font-size:9px!important}}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
