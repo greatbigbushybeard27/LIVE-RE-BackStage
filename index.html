@@ -3728,8 +3728,8 @@ window.renderStaffCalendar=function(){
  const firstNames={};(data.users||[]).filter(p=>p&&p.id&&String(p.name||'').trim().toLowerCase()!=='regency crew').forEach(p=>{const f=String(p.name||'').trim().split(/\s+/)[0].toLowerCase();firstNames[f]=(firstNames[f]||0)+1});
  const displayName=p=>{const parts=String(p.name||'Crew').trim().split(/\s+/),first=parts[0]||'Crew';return firstNames[first.toLowerCase()]>1&&parts.length>1?first+' '+parts[1][0].toUpperCase():first};
  const rowsHtml=visible.map(person=>{
-  const squares=dates.map(d=>d?'<div class="sc-day-block"></div>':'<div class="sc-day-block blank"></div>').join('');
-  return `<div class="sc-person-row"><div class="sc-person-name"><b>${escx(displayName(person))}</b></div><div class="sc-bigtrack ${staffCalendarView}">${squares}</div></div>`;
+  const squares=dates.map(d=>d?`<div class="sc-day-block" data-calendar-date="${dayKey(d)}"></div>`:'<div class="sc-day-block blank"></div>').join('');
+  return `<div class="sc-person-row" data-crew-profile-id="${escx(person.id)}"><div class="sc-person-name"><b>${escx(displayName(person))}</b></div><div class="sc-bigtrack ${staffCalendarView}">${squares}</div></div>`;
  }).join('');
  const requestsHtml=requests.map(r=>{const apps=r.applications||[],accepted=apps.filter(a=>a.status==='Accepted').length,applied=apps.filter(a=>a.status==='Pending').length,needed=Object.values(r.required||{}).reduce((s,n)=>s+n,0),applicable=Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`${role}: ${n}`).join(' · ');return `<div class="card sr-card"><div class="section-head"><div><h3 style="margin:0">${escx(r.title||jobLabel(r.jobId))}</h3><div class="muted small">${r.startDate}${r.endDate!==r.startDate?' to '+r.endDate:''} · ${r.startTime||''}–${r.finishTime||''}</div></div><span class="badge">${accepted}/${needed} filled</span></div><p class="small">${escx(applicable)}${(r.qualifications||[]).length?' · Skills: '+r.qualifications.map(escx).join(', '):''}</p>${r.notes?`<p class="muted small">${escx(r.notes)}</p>`:''}<p class="small muted">${applied} pending applications · ${apps.length} total applications</p>${isMgr?`<details><summary>Review crew applications (${apps.length})</summary>${apps.map(a=>`<div class="sr-app"><b>${escx(a.name)}</b><span class="small muted">${escx(a.role||'Crew')} · ${escx(a.status)}</span>${a.status==='Pending'?`<button onclick="reviewStaffApplication('${r.id}','${a.id}','Accept')">Select</button><button class="secondary" onclick="reviewStaffApplication('${r.id}','${a.id}','Decline')">Decline</button>`:''}</div>`).join('')||'<p class="muted">No applications yet.</p>'}</details><button class="secondary" onclick="closeStaffRequest('${r.id}')">Close request</button>`:`${Object.entries(r.required||{}).filter(([role,n])=>n>0).map(([role,n])=>`<button onclick="applyStaffRequest('${r.id}','${escx(role)}')">Request · ${escx(role)}</button>`).join('')}${!(Object.values(r.required||{}).some(n=>n>0))&&(r.qualifications||[]).length?`<button onclick="applyStaffRequest('${r.id}','')">Request this shift</button>`:''}`}</div>`}).join('');
  host.innerHTML=`<style>
@@ -3745,6 +3745,7 @@ window.renderStaffCalendar=function(){
  #staffCalendar .sc-bigtrack.month{gap:3px;grid-template-columns:repeat(7,minmax(0,1fr))}
  #staffCalendar .sc-bigtrack.month .sc-day-block{height:32px;color:#173022;font-size:11px;font-weight:700}
  #staffCalendar .sc-day-block.blank{visibility:hidden;pointer-events:none}
+ #staffCalendar .sc-day-block.db-shift{background:#8a6425!important;background-color:#8a6425!important;border:2px solid #e0ad4e!important;color:#fff7e7!important;font-weight:900!important;font-size:17px!important;text-align:center!important;line-height:38px!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)!important}
  #staffCalendar .sc-day-head{display:grid;grid-template-columns:92px minmax(0,1fr);gap:8px;margin:12px 0 4px}
  #staffCalendar .sc-day-head .sc-day-labels{display:grid;grid-template-columns:repeat(var(--sc-days),minmax(0,1fr));gap:4px}
  #staffCalendar .sc-day-head span{text-align:center;font-size:10px;font-weight:800;color:var(--regency-muted);white-space:nowrap}
@@ -4619,6 +4620,6 @@ window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.
  const oldProfile=window.openCrewProfile;window.openCrewProfile=function(){const r=oldProfile.apply(this,arguments);if(!(typeof isDirector==='function'&&isDirector()))document.querySelectorAll('.profile-gear').forEach(x=>x.remove());return r;};
 })();
 </script>
-<script src="V71.77B-CREW-WORKFLOW.js?v=71.77B1"></script>
+<script src="V71.77B-CREW-WORKFLOW.js?v=71.77B2"></script>
 </body>
 </html>
