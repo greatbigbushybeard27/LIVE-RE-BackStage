@@ -805,6 +805,40 @@ body.light-theme #themeFaderControl .tf-label{color:#527260!important}
 .nav-notification-badge{background:#087c46!important;border-color:#00d26a!important;color:#effff5!important;box-shadow:0 0 7px #00d26a44!important}
 @media(max-width:600px){#backstageMenuDrawer .menu-drawer-head{padding-top:3px!important;min-height:58px!important}#themeFaderControl{display:flex!important;position:static!important;margin-left:auto!important}#themeFaderControl .tf-panel{display:flex!important}}
 </style>
+
+<style id="bv1-3-9-complete-day-theme-coverage">
+/* BV1.3.9: finish light-theme coverage for navigation, drawer and off-job task cards. */
+body.light-theme #backstageMenuDrawer{background:#f7faf8!important;color:#172b22!important;border-right-color:#c5d8cc!important;box-shadow:15px 0 45px #172b2226!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-head{border-bottom-color:#c9d9cf!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-head strong,body.light-theme #backstageMenuDrawer .menu-drawer-link{color:#20352a!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-head small,body.light-theme #backstageMenuDrawer .menu-drawer-label{color:#61786b!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-link:hover,body.light-theme #backstageMenuDrawer .menu-drawer-link:focus{background:#e8f2ec!important;border-color:#c7ddcf!important;color:#20352a!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-link.active{background:transparent!important;border-color:transparent!important;color:#20352a!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-link .menu-icon .bs-icon{color:#526b5d!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-link.active .menu-icon .bs-icon{color:#00a85a!important;filter:drop-shadow(0 0 3px #00a85a44)!important}
+body.light-theme #backstageMenuDrawer .menu-lock-icon,body.light-theme #backstageMenuDrawer .menu-lock-icon .bs-icon{color:#00a85a!important}
+body.light-theme #backstageMenuDrawer .google-sync-card,body.light-theme #backstageMenuDrawer .dashboard-weather-card,body.light-theme #backstageMenuDrawer .dashboard-activity-card{background:#ffffff!important;color:#20352a!important;border-color:#cbdad1!important}
+body.light-theme #backstageMenuDrawer .google-sync-card b,body.light-theme #backstageMenuDrawer .dashboard-activity-card b,body.light-theme #backstageMenuDrawer .dashboard-weather-card b{color:#20352a!important}
+body.light-theme #backstageMenuDrawer .google-sync-card .small,body.light-theme #backstageMenuDrawer .google-sync-status{color:#617468!important}
+body.light-theme #backstageMenuDrawer button.secondary{background:#e8f0eb!important;color:#20352a!important;border-color:#c5d5cb!important}
+body.light-theme #backstageMenuDrawer .menu-drawer-close{background:#e8f0eb!important;color:#20352a!important;border-color:#c5d5cb!important}
+body.light-theme #themeFaderControl{background:#f4faf6!important;color:#20352a!important;border-color:#b8d0c1!important;box-shadow:0 2px 8px #00000012!important}
+body.light-theme #themeFaderControl .tf-label{color:#61786b!important}
+body.light-theme #themeFaderControl .tf-mode{color:#167348!important}
+body.light-theme #backstageMenuButton{background:#f7faf8!important;color:#20352a!important;border-color:#b8d0c1!important;box-shadow:0 3px 12px #0002!important}
+body.light-theme #backstageMenuButton svg{stroke:#526b5d!important}
+body.light-theme .task-card{background:#ffffff!important;color:#17202a!important;border-color:#cbd5df!important;box-shadow:0 2px 7px #0000000b!important}
+body.light-theme .task-card .task-title,body.light-theme .task-card .task-head>div,body.light-theme .task-card .task-head>div[style]{color:#17202a!important;-webkit-text-fill-color:#17202a!important}
+body.light-theme .task-card .task-meta{color:#526171!important}
+body.light-theme .task-card .task-check{accent-color:#16834f!important}
+body.light-theme .bottom-nav,body.light-theme .pwa-nav{background:#ffffff!important;border-top-color:#2e7d57!important}
+body.light-theme .bottom-nav button,body.light-theme .pwa-nav button{background:#f2f6f3!important;color:#52675c!important;border-color:#d1ddd5!important}
+body.light-theme .bottom-nav button .bs-icon,body.light-theme .pwa-nav button .bs-icon,body.light-theme .bottom-nav button svg,body.light-theme .pwa-nav button svg{color:#52675c!important;stroke:currentColor!important}
+body.light-theme .bottom-nav button.active,body.light-theme .pwa-nav button.active{background:#e4f1e9!important;color:#176b43!important;border-color:#2e7d57!important}
+body.light-theme .bottom-nav button.active .bs-icon,body.light-theme .pwa-nav button.active .bs-icon,body.light-theme .bottom-nav button.active svg,body.light-theme .pwa-nav button.active svg{color:#00a85a!important;stroke:#00a85a!important}
+body.light-theme .nav-notification-badge{background:#00a85a!important;color:#ffffff!important;border-color:#ffffff!important}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -827,7 +861,7 @@ body.light-theme #themeFaderControl .tf-label{color:#527260!important}
  <div class="google-sync-card" style="margin:6px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.3.7</div>
+<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.3.9</div>
 </aside>
 <main>
 <section id="dashboard"></section>
