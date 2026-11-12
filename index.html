@@ -720,7 +720,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 @media(max-width:900px){#backstageMenuButton{top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;width:48px!important;height:48px!important;} }
 </style>
 
-<meta name="backstage-build" content="BV1.3.8-MENU-CONTROLS-FIX">
+<meta name="backstage-build" content="BV1.4-LIGHT-MODE-POLISH">
 
 <style id="backstage-v7177b8-popup-groups">
 .b77-group{display:block!important;padding:14px!important;margin:12px 0!important}
@@ -839,6 +839,93 @@ body.light-theme .bottom-nav button.active .bs-icon,body.light-theme .pwa-nav bu
 body.light-theme .nav-notification-badge{background:#00a85a!important;color:#ffffff!important;border-color:#ffffff!important}
 </style>
 
+
+<style id="bv1-4-full-light-mode-polish">
+/* BV1.4: finish light-theme treatment for job progress, crew shifts, Portaloo and dashboard tools. */
+body.light-theme .progress .step,
+body.light-theme .job-stage-progress .step,
+body.light-theme .portaloo-status-progress .step,
+body.light-theme .event-category-status-buttons button.status-select-btn {
+  background:#e8f0eb!important;color:#34483d!important;border:1px solid #c8d8ce!important;box-shadow:none!important;
+}
+body.light-theme .progress .step.active,
+body.light-theme .job-stage-progress .step.active,
+body.light-theme .portaloo-status-progress .step.active,
+body.light-theme .event-category-status-buttons button.status-select-btn.active {
+  background:var(--regency-green,#287b55)!important;color:#fff!important;border-color:#168b55!important;
+}
+body.light-theme .progress .step.done,
+body.light-theme .job-stage-progress .step.done,
+body.light-theme .portaloo-status-progress .step.done {
+  background:#d9f1e3!important;color:#17633d!important;border-color:#b8dfc8!important;
+}
+/* Preserve the established amber/red/green meaning of Portaloo workflow states. */
+body.light-theme .portaloo-progress-booked .step.active{background:#a76508!important;color:#fff!important;border-color:#d99a32!important}
+body.light-theme .portaloo-progress-on-site .step.active{background:#087a3f!important;color:#fff!important;border-color:#1bbd67!important}
+body.light-theme .portaloo-progress-collect .step.active{background:#a32626!important;color:#fff!important;border-color:#cf4545!important}
+body.light-theme .portaloo-progress-closed .step.active{background:#e8edf1!important;color:#26352d!important;border-color:#cbd5df!important}
+/* Available Shifts headings, counters and disclosure controls. */
+body.light-theme .profile-section,
+body.light-theme .profile-section h2,
+body.light-theme .profile-section h3,
+body.light-theme .profile-section h4,
+body.light-theme .profile-section summary,
+body.light-theme .profile-section .section-head,
+body.light-theme .profile-section .section-head b {color:#172b22!important;-webkit-text-fill-color:#172b22!important}
+body.light-theme .profile-section .card,
+body.light-theme .profile-section details,
+body.light-theme .profile-section .profile-card {background:#fff!important;color:#172b22!important;border-color:#d2ded7!important}
+body.light-theme .profile-section .badge,
+body.light-theme .profile-section .calendar-count {color:#17633d!important}
+body.light-theme .profile-section .muted,
+body.light-theme .profile-section .small {color:#586b60!important;-webkit-text-fill-color:#586b60!important}
+body.light-theme .profile-section button.secondary {background:#e8f0eb!important;color:#20352a!important;border-color:#c5d5cb!important}
+/* Portaloo cards and their information blocks. */
+body.light-theme .portaloo-card,
+body.light-theme .portaloo-card .portaloo-unit,
+body.light-theme .portaloo-card .portaloo-service,
+body.light-theme .portaloo-card .portaloo-notes,
+body.light-theme .portaloo-card .portaloo-stat,
+body.light-theme .portaloo-card .portaloo-units {background:#fff!important;color:#172b22!important;border-color:#cbdad1!important}
+body.light-theme .portaloo-card .portaloo-title,
+body.light-theme .portaloo-card h2,
+body.light-theme .portaloo-card h3,
+body.light-theme .portaloo-card b {color:#172b22!important;-webkit-text-fill-color:#172b22!important}
+body.light-theme .portaloo-card .portaloo-sub,
+body.light-theme .portaloo-card .portaloo-stat span,
+body.light-theme .portaloo-card .portaloo-unit span {color:#586b60!important}
+/* Dashboard tools: remove the old dark nested panels in day mode. */
+body.light-theme .google-sync-card,
+body.light-theme .dashboard-weather-card,
+body.light-theme .dashboard-activity-card {background:#fff!important;color:#172b22!important;border-color:#cbdad1!important;box-shadow:0 2px 8px #0000000c!important}
+body.light-theme .google-sync-card b,
+body.light-theme .dashboard-weather-card b,
+body.light-theme .dashboard-activity-card b,
+body.light-theme .dashboard-weather-card h2,
+body.light-theme .dashboard-weather-card h3,
+body.light-theme .dashboard-activity-card h2,
+body.light-theme .dashboard-activity-card h3 {color:#172b22!important;-webkit-text-fill-color:#172b22!important}
+body.light-theme .google-sync-card .small,
+body.light-theme .google-sync-status,
+body.light-theme .dashboard-weather-card .small,
+body.light-theme .dashboard-activity-card .small,
+body.light-theme .dashboard-activity-card .activity-time,
+body.light-theme .dashboard-activity-card .activity-main span {color:#586b60!important;-webkit-text-fill-color:#586b60!important}
+body.light-theme .dashboard-weather-card .weather-grid>div {background:#f3f7f4!important;color:#20352a!important;border-color:#d2ded7!important}
+body.light-theme .dashboard-weather-card .weather-grid b {color:#20352a!important}
+body.light-theme .dashboard-weather-card .weather-grid span {color:#586b60!important}
+body.light-theme .dashboard-activity-card .activity-row {background:#f7faf8!important;color:#20352a!important;border-color:#d2ded7!important}
+body.light-theme .dashboard-activity-card .activity-main,
+body.light-theme .dashboard-activity-card .activity-main b {color:#20352a!important;-webkit-text-fill-color:#20352a!important}
+body.light-theme .google-sync-card button.secondary,
+body.light-theme .dashboard-activity-card button.secondary {background:#e8f0eb!important;color:#20352a!important;border-color:#c5d5cb!important}
+/* Text and nested cards must not retain dark-mode foreground colours. */
+body.light-theme .task-card,
+body.light-theme .task-card .task-title,
+body.light-theme .task-card .task-head>div {color:#172b22!important;-webkit-text-fill-color:#172b22!important}
+body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fill-color:#586b60!important}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -858,10 +945,10 @@ body.light-theme .nav-notification-badge{background:#00a85a!important;color:#fff
  <button class="menu-drawer-link" data-page="reportsData" onclick="menuShowPage('reportsData')"><span class="menu-icon">📊</span>Reports &amp; Data</button>
  <button class="menu-drawer-link" data-page="vehicleMaintenance" onclick="menuShowPage('vehicleMaintenance')"><span class="menu-icon">🔧</span>Vehicle Maintenance</button>
  <div class="menu-drawer-label">DASHBOARD TOOLS</div>
- <div class="google-sync-card" style="margin:6px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
- <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
- <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.3.9</div>
+ <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
+ <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
+ <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
+<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.4</div>
 </aside>
 <main>
 <section id="dashboard"></section>
