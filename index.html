@@ -772,6 +772,17 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 @media(max-width:430px){.pwa-nav button{font-size:9px!important}.pwa-nav .nav-label{font-size:9px!important}}
 </style>
 
+
+<style id="bv1-3-5-hamburger-active-icon-only">
+/* Match the bottom navigation: the current page lights its icon, not the whole row. */
+.menu-drawer-link.active,.menu-drawer-link.active:hover{background:transparent!important;border-color:transparent!important;color:#e7eee9!important;box-shadow:none!important}
+.menu-drawer-link:hover{background:#0d1a14!important;border-color:transparent!important;color:#e7eee9!important}
+.menu-drawer-link .menu-icon .bs-icon{color:#dce7e0!important;transition:color .16s ease,filter .16s ease,transform .16s ease}
+.menu-drawer-link.active .menu-icon .bs-icon{color:#00d26a!important;filter:drop-shadow(0 0 4px #00d26a66)!important;transform:translateY(-1px)}
+.menu-drawer-link.active .menu-icon{color:#00d26a!important}
+.menu-drawer-link .menu-lock-icon,.menu-drawer-link .menu-lock-icon .bs-icon{color:#00d26a!important}
+</style>
+
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1791,6 +1802,7 @@ function showPage(page){
  if(page==='marquee')page='equipment';
  const navPage=(page==='jobs'?'events':page);
  document.querySelectorAll('.pwa-nav [data-nav-page]').forEach(btn=>{const active=btn.dataset.navPage===navPage;btn.classList.toggle('active',active);if(active)btn.setAttribute('aria-current','page');else btn.removeAttribute('aria-current');});
+ if(typeof syncBackstageMenuActive==='function')syncBackstageMenuActive(page);
  ['dashboard','create','equipment','events','jobs','portaloo','marquee','activity','notifications','windForecast','hours','crewManagement','appTutorials','healthSafety','crewHealthSafety','crewLoginEdit','scanner','hireVehicles','expenseClaims','reportsData','vehicleMaintenance'].forEach(id=>{
    const el=document.getElementById(id);
    if(el)el.classList.toggle('hidden',id!==page);
@@ -2073,9 +2085,10 @@ function renderDashboardCalendar(){
  }
  box.innerHTML=`<div class="calendar-redesign"><div class="calendar-topline"><h2>Calendar</h2><div class="calendar-top-actions"><button class="secondary" onclick="resetCalendarPeriod()" title="Today">Today</button></div></div><div class="calendar-period-nav"><button class="secondary" onclick="changeCalendarPeriod(-1)" aria-label="Previous period">‹</button><div class="calendar-range">${esc(calendarRangeLabel(start,end))}</div><button class="secondary" onclick="changeCalendarPeriod(1)" aria-label="Next period">›</button></div><div class="calendar-counts"><div class="calendar-count events"><strong>${counts.events}</strong><span>Events</span></div><div class="calendar-count vans"><strong>${counts.vans}</strong><span>Van Hire</span></div><div class="calendar-count portaloo"><strong>${counts.portaloo}</strong><span>Portaloo Jobs</span></div></div><div class="calendar-view-tabs"><button class="${calendarView==='day'?'active':''}" onclick="setCalendarView('day')">Day</button><button class="${calendarView==='week'?'active':''}" onclick="setCalendarView('week')">Week</button><button class="${calendarView==='month'?'active':''}" onclick="setCalendarView('month')">Month</button></div><div class="calendar-filters"><button class="${calendarFilter==='all'?'active':''}" onclick="setCalendarFilter('all')">✓ All</button><button class="${calendarFilter==='events'?'active':''}" onclick="setCalendarFilter('events')"><i class="filter-dot events"></i>Events</button><button class="${calendarFilter==='vans'?'active':''}" onclick="setCalendarFilter('vans')"><i class="filter-dot vans"></i>Van Hire</button><button class="${calendarFilter==='portaloo'?'active':''}" onclick="setCalendarFilter('portaloo')"><i class="filter-dot portaloo"></i>Portaloo</button></div>${content}<div class="calendar-legend"><span><i class="calendar-dot events"></i>Events / Jobs</span><span><i class="calendar-dot vans"></i>Van Hire</span><span><i class="calendar-dot portaloo"></i>Portaloo Hire</span></div><div class="small muted" style="margin-top:8px">Tap a booking to open its record. Multi-day bookings span across the calendar.</div></div>`;
 }
-function toggleBackstageMenu(){if(!document.body.classList.contains('backstage-menu-open')){const mb=document.getElementById('modalBody');if(mb&&mb.querySelector('.profile-title-row')&&typeof closeModal==='function')closeModal();}document.body.classList.toggle('backstage-menu-open');const drawer=document.getElementById('backstageMenuDrawer');if(drawer)drawer.setAttribute('aria-hidden',document.body.classList.contains('backstage-menu-open')?'false':'true');}
+function syncBackstageMenuActive(page){document.querySelectorAll('.menu-drawer-link').forEach(b=>{const active=String(b.dataset.page||'')===String(page||'');b.classList.toggle('active',active);if(active){b.setAttribute('aria-current','page')}else{b.removeAttribute('aria-current')}});}
+function toggleBackstageMenu(){if(!document.body.classList.contains('backstage-menu-open')){const mb=document.getElementById('modalBody');if(mb&&mb.querySelector('.profile-title-row')&&typeof closeModal==='function')closeModal();const current=[...document.querySelectorAll('#backstageMenuDrawer .menu-drawer-link')].map(b=>b.dataset.page).find(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden')});if(current)syncBackstageMenuActive(current);}document.body.classList.toggle('backstage-menu-open');const drawer=document.getElementById('backstageMenuDrawer');if(drawer)drawer.setAttribute('aria-hidden',document.body.classList.contains('backstage-menu-open')?'false':'true');}
 function closeBackstageMenu(){document.body.classList.remove('backstage-menu-open');const drawer=document.getElementById('backstageMenuDrawer');if(drawer)drawer.setAttribute('aria-hidden','true');}
-function menuShowPage(page){if(page==='crewManagement'&&!(typeof isDirector==='function'&&isDirector())){closeBackstageMenu();alert('Crew Management is restricted to Director accounts.');return;}closeBackstageMenu();if(page==='appTutorials'){}showPage(page);document.querySelectorAll('.menu-drawer-link').forEach(b=>b.classList.toggle('active',b.dataset.page===page));}
+function menuShowPage(page){if(page==='crewManagement'&&!(typeof isDirector==='function'&&isDirector())){closeBackstageMenu();alert('Crew Management is restricted to Director accounts.');return;}closeBackstageMenu();if(page==='appTutorials'){}showPage(page);syncBackstageMenuActive(page);}
 function renderCrewManagementPage(){const el=document.getElementById('crewManagement');if(!el)return;const director=typeof isDirector==='function'&&isDirector();el.innerHTML=`<div class="card"><div class="section-head"><div><h2 style="margin:0">👥 Crew Management</h2><div class="muted">Add crew, review hours and manage crew records.</div></div></div><div class="create-grid"><div class="create-card"><div class="create-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button ${director?'':'disabled'} onclick="newCrewMember()">＋ Add Crew</button>${director?'':'<p class="small muted">Director access required.</p>'}</div><div class="create-card"><div class="create-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button ${director?'':'disabled'} onclick="openAdminHours()">Open Crew Hours</button></div><div class="create-card"><div class="create-icon">🧑‍🤝‍🧑</div><h3>Manage Crew</h3><p>Manage regular crew records, casual crew inductions and login settings.</p><button ${director?'':'disabled'} onclick="openCrewManagementHub()">Open Crew Management</button></div></div></div>`;}
 function renderAppTutorialsPage(){const el=document.getElementById('appTutorials');if(!el)return;const rows=typeof readTutorials==='function'?readTutorials():[];const canEdit=typeof isDirector==='function'&&isDirector();el.innerHTML=`<div class="card"><div class="section-head"><div><h2 style="margin:0">🎬 App Tutorials</h2><div class="muted">Training videos and quick guides for using Backstage.</div></div></div>${rows.length?rows.map(r=>`<div class="card" style="margin:10px 0"><h3>${escapeText(r.title)}</h3><p class="muted">${escapeText(r.description||'')}</p><button onclick="window.open(${JSON.stringify(r.url)},'_blank','noopener,noreferrer')">▶ Watch tutorial</button></div>`).join(''):'<div class="empty">No app tutorials added yet. Add a video link below.</div>'}${canEdit?`<div class="card"><h3>Add App Training Video</h3><p class="muted">Add a title and HTTPS link to a training video. It will appear here for the team.</p><label for="appTutorialTitle">Video title</label><input id="appTutorialTitle" placeholder="e.g. Creating a job"><label for="appTutorialDesc">Description</label><input id="appTutorialDesc" placeholder="What this video explains"><label for="appTutorialUrl">Video link (HTTPS)</label><input id="appTutorialUrl" placeholder="https://…"><button onclick="saveAppTutorialFromPage()">＋ Add training video</button></div>`:''}</div>`;}
 function saveAppTutorialFromPage(){if(typeof isDirector==='function'&&!isDirector()){alert('Director access required.');return;}const title=document.getElementById('appTutorialTitle')?.value.trim(),description=document.getElementById('appTutorialDesc')?.value.trim()||'',url=document.getElementById('appTutorialUrl')?.value.trim();if(!title||!isSafeUrl(url)){alert('Enter a video title and a valid HTTPS link.');return;}const rows=readTutorials();rows.push({title,description,url});localStorage.setItem(TKEY,JSON.stringify(rows));renderAppTutorialsPage();}
@@ -4802,5 +4815,26 @@ function scan(root){let w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),a
 function start(){scan(document.body);let ob=new MutationObserver(rs=>rs.forEach(r=>{if(r.type==='childList')r.addedNodes.forEach(n=>n.nodeType===3?convert(n):n.nodeType===1&&scan(n));else if(r.type==='characterData')convert(r.target);}));ob.observe(document.body,{subtree:true,childList:true,characterData:true});window.backstageRefreshLineIcons=()=>scan(document.body);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();})();
 </script>
+
+<style id="bv1-3-6-hamburger-icon-only-final">
+/* Final override: selected hamburger item has no green tile, only its icon lights up. */
+#backstageMenuDrawer .menu-drawer-link.active,
+#backstageMenuDrawer .menu-drawer-link.active:hover,
+#backstageMenuDrawer .menu-drawer-link.active:focus {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #e7eee9 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+#backstageMenuDrawer .menu-drawer-link.active .menu-icon,
+#backstageMenuDrawer .menu-drawer-link.active .menu-icon .bs-icon,
+#backstageMenuDrawer .menu-drawer-link.active .menu-icon .bs-icon svg {
+  color: #00d26a !important;
+}
+#backstageMenuDrawer .menu-drawer-link.active .menu-icon .bs-icon {
+  filter: drop-shadow(0 0 4px #00d26a66) !important;
+}
+</style>
 </body>
 </html>
