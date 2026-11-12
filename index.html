@@ -3914,8 +3914,8 @@ window.renderStaffCalendar=function(){
  const displayName=p=>{const a=String(p.name||'Crew').trim().split(/\s+/);return firstNames[(a[0]||'').toLowerCase()]>1&&a[1]?a[0]+' '+a[1][0].toUpperCase():a[0]||'Crew';};
  const columns=rosterView==='month'?dates.length:dates.length;
  const rows=visible.map(person=>{
-  const cells=dates.map(d=>{const k=key(d),state=getState(person,k);const label=state==='available'?'Working':state==='unavailable'?'Unavailable':'';const cls=state==='available'?'available':state==='unavailable'?'unavailable':'empty';const hasNote=(data.staffCalendarNotes||[]).some(n=>String(n.userId)===String(person.id)&&n.date===k&&String(n.text||'').trim());return `<button class="v746-cell ${cls}" title="${displayName(person)} · ${k} · ${label||'Not scheduled'}${hasNote?' · Has note':''}" onclick="crewRosterAvailabilityV748('${person.id}','${k}')"><span>${rosterView==='month'?d.getDate():''}</span>${hasNote?'<i class="v748-note-dot"></i>':''}</button>`;}).join('');
-  return `<div class="v746-person-row"><div class="v746-person-name"><b>${displayName(person)}</b></div><div class="v746-track ${rosterView}">${cells}</div></div>`;
+  const cells=dates.map(d=>{const k=key(d),state=getState(person,k);const label=state==='available'?'Working':state==='unavailable'?'Unavailable':'';const cls=state==='available'?'available':state==='unavailable'?'unavailable':'empty';const hasNote=(data.staffCalendarNotes||[]).some(n=>String(n.userId)===String(person.id)&&n.date===k&&String(n.text||'').trim());return `<button class="v746-cell ${cls}" data-calendar-date="${k}" title="${displayName(person)} · ${k} · ${label||'Not scheduled'}${hasNote?' · Has note':''}" onclick="crewRosterAvailabilityV748('${person.id}','${k}')"><span>${rosterView==='month'?d.getDate():''}</span>${hasNote?'<i class="v748-note-dot"></i>':''}</button>`;}).join('');
+  return `<div class="v746-person-row" data-crew-profile-id="${person.id}"><div class="v746-person-name"><b>${displayName(person)}</b></div><div class="v746-track ${rosterView}">${cells}</div></div>`;
  }).join('');
  const headings=dates.map(d=>`<span>${rosterView==='month'?d.toLocaleDateString('en-GB',{weekday:'short'}):d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric'})}</span>`).join('');
  host.innerHTML=`<style>
@@ -3946,6 +3946,8 @@ window.renderStaffCalendar=function(){
  #staffCalendar .v746-cell.available{background:rgba(42,125,75,.32);border-color:#438b5d}
  #staffCalendar .v746-cell.unavailable{background:rgba(160,55,55,.32);border-color:#a94c4c}
  #staffCalendar .v746-cell.booked{background:rgba(42,125,75,.32);border-color:#438b5d}
+ #staffCalendar .v746-cell.db-shift{background:rgba(189,140,54,.24)!important;border:2px solid #bd8c36!important;color:#fff!important;position:relative}
+ #staffCalendar .v746-cell.db-shift .db-shift-mark{display:block;font-size:11px;line-height:1;font-weight:900;color:#f0bd59;margin-top:2px}
  #staffCalendar .v746-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:12px;font-size:12px}
  #staffCalendar .v746-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
  #staffCalendar input[type=date]{max-width:170px}
