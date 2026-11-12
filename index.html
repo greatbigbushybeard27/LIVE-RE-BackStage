@@ -721,6 +721,15 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 </style>
 
 <meta name="backstage-build" content="V71.76.2-CLOUD-SYNC-CONFLICT-GUARD">
+
+<style id="backstage-v7177b8-popup-groups">
+.b77-group{display:block!important;padding:14px!important;margin:12px 0!important}
+.b77-group>summary{display:flex!important;min-height:42px;align-items:center;justify-content:space-between;gap:12px;list-style:none!important;cursor:pointer!important;color:var(--text,#eef5ef)!important}
+.b77-group>summary::-webkit-details-marker{display:none}
+.b77-group>summary:after{content:'＋';font-size:20px;font-weight:900;opacity:.8}
+.b77-group[open]>summary:after{content:'−'}
+.b77-group>.b77-group-content{display:block;padding-top:10px}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
