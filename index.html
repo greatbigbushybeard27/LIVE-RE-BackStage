@@ -720,7 +720,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 @media(max-width:900px){#backstageMenuButton{top:calc(env(safe-area-inset-top, 0px) + 14px)!important;left:12px!important;width:48px!important;height:48px!important;} }
 </style>
 
-<meta name="backstage-build" content="V71.76.2-CLOUD-SYNC-CONFLICT-GUARD">
+<meta name="backstage-build" content="BV1.3.8-MENU-CONTROLS-FIX">
 
 <style id="backstage-v7177b8-popup-groups">
 .b77-group{display:block!important;padding:14px!important;margin:12px 0!important}
@@ -783,10 +783,32 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
 .menu-drawer-link .menu-lock-icon,.menu-drawer-link .menu-lock-icon .bs-icon{color:#00d26a!important}
 </style>
 
+
+<style id="bv1-3-8-menu-controls-final">
+/* BV1.3.8: menu controls, placed in the document head so the live page always applies them. */
+#backstageMenuButton{position:fixed!important;top:calc(env(safe-area-inset-top,0px) + 14px)!important;left:12px!important;z-index:2147483000!important;display:flex!important;align-items:center!important;justify-content:center!important;width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;padding:0!important;border-radius:14px!important;background:#0b1712!important;border:1px solid #294638!important;color:#dce9e1!important;box-shadow:0 3px 12px #0006!important;touch-action:manipulation!important}
+#backstageMenuButton svg{width:25px!important;height:25px!important;display:block!important;fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+#backstageMenuButton:active{color:#00d26a!important;border-color:#167d4a!important;transform:scale(.96)}
+body.backstage-menu-open #backstageMenuButton{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}
+.menu-drawer-head{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;padding-top:3px!important;min-height:58px!important}
+.menu-drawer-head>div:first-child{min-width:0!important;flex:1 1 auto!important}
+#themeFaderControl{position:static!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;transform:none!important;display:flex!important;flex:0 0 auto!important;align-items:center!important;margin:0 8px 0 auto!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;max-width:none!important;z-index:auto!important}
+#themeFaderControl .tf-compact{display:none!important}
+#themeFaderControl .tf-panel{display:flex!important;align-items:center!important;gap:6px!important;padding:5px 7px!important;border:1px solid #294638!important;border-radius:9px!important;background:#0c1912!important;box-shadow:none!important;color:#dce9e1!important}
+#themeFaderControl .tf-label{font-size:8px!important;letter-spacing:.08em!important;color:#9db5a7!important}
+#themeFaderControl .tf-track{width:24px!important;height:38px!important;min-height:38px!important;border-radius:7px!important}
+#themeFaderControl .tf-knob{width:16px!important;height:13px!important;left:3px!important}
+#themeFaderControl[data-mode="light"] .tf-knob{top:20px!important}
+#themeFaderControl .tf-mode{font-size:8px!important;min-width:25px!important;color:#00d26a!important}
+body.light-theme #themeFaderControl .tf-panel{background:#f4faf6!important;color:#183326!important;border-color:#9bbca8!important}
+body.light-theme #themeFaderControl .tf-label{color:#527260!important}
+.nav-notification-badge{background:#087c46!important;border-color:#00d26a!important;color:#effff5!important;box-shadow:0 0 7px #00d26a44!important}
+@media(max-width:600px){#backstageMenuDrawer .menu-drawer-head{padding-top:3px!important;min-height:58px!important}#themeFaderControl{display:flex!important;position:static!important;margin-left:auto!important}#themeFaderControl .tf-panel{display:flex!important}}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
-<button id="backstageMenuButton" type="button" aria-label="Open menu" title="Menu" onclick="toggleBackstageMenu()">☰</button>
+<button id="backstageMenuButton" type="button" aria-label="Open menu" title="Open menu" onclick="toggleBackstageMenu()"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 7h15M4.5 12h15M4.5 17h15"/></svg></button>
 <div id="backstageMenuOverlay" onclick="closeBackstageMenu()"></div>
 <aside id="backstageMenuDrawer" aria-label="Main navigation" aria-hidden="true">
  <div class="menu-drawer-head"><div><strong>Backstage</strong><small>Event Management</small></div><button class="menu-drawer-close secondary" onclick="closeBackstageMenu()" aria-label="Close menu">×</button></div>
@@ -805,7 +827,7 @@ body.light-theme .calendar-view-tabs button.active{background:#00c987!important;
  <div class="google-sync-card" style="margin:6px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px;background:#0c1913!important;border-color:#294337!important"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.3</div>
+<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.3.7</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -3510,20 +3532,22 @@ body.light-theme .hire-range-picker{background:#f8fafc!important;color:#17202a!i
   }
   function init(){
     let mode='dark';try{mode=localStorage.getItem(key)||'dark';}catch(e){}
-    const banner=document.querySelector('header');
-    if(banner){if(getComputedStyle(banner).position==='static')banner.style.position='relative';
-      if(!document.getElementById('themeFaderControl')){
-        const control=document.createElement('div');control.id='themeFaderControl';control.dataset.mode=mode;
-        control.innerHTML='<button type="button" class="tf-compact" aria-label="Open day/night theme control" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg></button><div class="tf-panel"><span class="tf-label">THEME</span><button type="button" class="tf-track" aria-label="Toggle day and night theme"><span class="tf-knob"></span></button><span class="tf-mode">'+(mode==='light'?'DAY':'NIGHT')+'</span></div>';
+    const menuHead=document.querySelector('#backstageMenuDrawer .menu-drawer-head');
+    if(menuHead){
+      let control=document.getElementById('themeFaderControl');
+      if(!control){
+        control=document.createElement('div');control.id='themeFaderControl';control.dataset.mode=mode;
+        control.innerHTML='<button type="button" class="tf-compact" aria-label="Open day/night theme control" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg></button><div class="tf-panel"><span class="tf-label">MODE</span><button type="button" class="tf-track" aria-label="Toggle day and night theme"><span class="tf-knob"></span></button><span class="tf-mode">'+(mode==='light'?'DAY':'NIGHT')+'</span></div>';
         const compact=control.querySelector('.tf-compact');
         compact.addEventListener('click',function(){if(!isMobile())return;setExpanded(!control.classList.contains('tf-expanded'));});
         const track=control.querySelector('.tf-track');
-        const changeTheme=function(){const next=document.body.classList.contains('light-theme')?'dark':'light';try{localStorage.setItem(key,next);}catch(e){}apply(next);if(isMobile())restartCollapseTimer();};
+        const changeTheme=function(){const next=document.body.classList.contains('light-theme')?'dark':'light';try{localStorage.setItem(key,next);}catch(e){}apply(next);};
         track.addEventListener('click',changeTheme);
-        control.addEventListener('pointerdown',()=>{if(isMobile()&&control.classList.contains('tf-expanded'))restartCollapseTimer();});
-        control.addEventListener('keydown',()=>{if(isMobile()&&control.classList.contains('tf-expanded'))restartCollapseTimer();});
-        banner.appendChild(control);
+        control.addEventListener('pointerdown',()=>{});
+        control.addEventListener('keydown',()=>{});
       }
+      const close=menuHead.querySelector('.menu-drawer-close');
+      if(close&&control.parentElement!==menuHead)menuHead.insertBefore(control,close);
     }
     apply(mode);
     const syncViewport=()=>{if(!isMobile()){setExpanded(false);if(collapseTimer){clearTimeout(collapseTimer);collapseTimer=null;}}};
@@ -4836,5 +4860,21 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   filter: drop-shadow(0 0 4px #00d26a66) !important;
 }
 </style>
+
+<script id="bv1-3-8-menu-controls-runtime">
+(function(){
+ function syncMenuControls(){
+  var open=document.body.classList.contains('backstage-menu-open');
+  var trigger=document.getElementById('backstageMenuButton');
+  if(trigger){trigger.style.setProperty('display',open?'none':'flex','important');trigger.style.setProperty('visibility',open?'hidden':'visible','important');trigger.style.setProperty('pointer-events',open?'none':'auto','important');}
+  var head=document.querySelector('#backstageMenuDrawer .menu-drawer-head');
+  var control=document.getElementById('themeFaderControl');
+  var close=head&&head.querySelector('.menu-drawer-close');
+  if(head&&control&&close&&control.parentElement!==head)head.insertBefore(control,close);
+ }
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',syncMenuControls);else syncMenuControls();
+ var bodyObserver=new MutationObserver(syncMenuControls);bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
+})();
+</script>
 </body>
 </html>
