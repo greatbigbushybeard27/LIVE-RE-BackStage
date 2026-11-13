@@ -948,7 +948,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.4</div>
+<div id="backstage-app-version" data-release="BV1.6.4" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.6.4</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -4823,7 +4823,7 @@ window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.
    const fileRows=docs.length?docs.map(d=>`<div class="v51-file-row"><div><b>${safe(d.name)}</b><div class="small muted">${safe(d.type||'Document')} · ${safe(formatCrewDocSize(d.size))} · ${d.createdAt?new Date(d.createdAt).toLocaleDateString('en-GB'):''}</div></div><button class="secondary" onclick="viewV51File('${safe(d.id)}')">View</button></div>`).join(''):'<p class="small muted">No documents uploaded for this crew member.</p>';
    const employment=u.staffType||u.employmentType||u.employmentCategory||u.crewType||'Regular Crew';
    openModal(`<div class="section-head"><div><h2 style="margin:0">👤 ${safe(u.name)}</h2><div class="muted">Director-managed personnel profile</div></div></div>
-    <div class="card"><h3>Personal &amp; employment details</h3><label>Full name<input id="dp_name" value="${safe(u.name||'')}"></label><label>Phone<input id="dp_phone" value="${safe(p.phone||u.phone||'')}"></label><label>Email<input id="dp_email" type="email" value="${safe(p.email||u.email||'')}"></label><label>Emergency contact name<input id="dp_emergency" value="${safe(p.emergencyContact||'')}"></label><label>Emergency contact phone<input id="dp_emergencyPhone" value="${safe(p.emergencyPhone||'')}"></label><label>Employment type<select id="dp_type"><option value="Regular Crew" ${employment==='Regular Crew'?'selected':''}>Regular Crew</option><option value="Part Time Crew" ${employment==='Part Time Crew'?'selected':''}>Part Time Crew</option></select></label><label>Start date<input id="dp_start" type="date" value="${safe(p.startDate||'')}"></label><label>Employment status<select id="dp_status"><option value="Active" ${p.status!=='Inactive'?'selected':''}>Active</option><option value="Inactive" ${p.status==='Inactive'?'selected':''}>Inactive</option></select></label><button onclick="saveDirectorCrewProfileV758('${safe(id)}')">Save personal details</button></div>
+    <div class="card"><h3>Personal &amp; employment details</h3><label>Full name<input id="dp_name" value="${safe(u.name||'')}"></label><label>Phone<input id="dp_phone" value="${safe(p.phone||u.phone||'')}"></label><label>Email<input id="dp_email" type="email" value="${safe(p.email||u.email||'')}"></label><label>Emergency contact name<input id="dp_emergency" value="${safe(p.emergencyContact||'')}"></label><label>Emergency contact phone<input id="dp_emergencyPhone" value="${safe(p.emergencyPhone||'')}"></label><label>Employment type<select id="dp_type"><option value="Regular Crew" ${employment==='Regular Crew'?'selected':''}>Regular Crew</option><option value="Part Time Crew" ${employment==='Part Time Crew'?'selected':''}>Part Time Crew</option><option value="Casual Crew" ${employment==='Casual Crew'?'selected':''}>Casual Crew</option></select></label><label>Start date<input id="dp_start" type="date" value="${safe(p.startDate||'')}"></label><label>Employment status<select id="dp_status"><option value="Active" ${p.status!=='Inactive'?'selected':''}>Active</option><option value="Inactive" ${p.status==='Inactive'?'selected':''}>Inactive</option></select></label><button onclick="saveDirectorCrewProfileV758('${safe(id)}')">Save personal details</button></div>
     <div class="card"><h3>💷 Pay rates (Director only)</h3><label>Standard hourly rate (£)<input id="dp_rate" type="number" min="0" step="0.01" value="${Number(w.standardRate??0).toFixed(2)}"></label><label>Enhanced rate 1 (£)<input id="dp_rate1" type="number" min="0" step="0.01" value="${Number(w.enhanced1Rate??0).toFixed(2)}"></label><label>Enhanced rate 2 (£)<input id="dp_rate2" type="number" min="0" step="0.01" value="${Number(w.enhanced2Rate??0).toFixed(2)}"></label><label>Tax deduction (%)<input id="dp_tax" type="number" min="0" max="100" step="0.01" value="${Number(w.taxPercent||0).toFixed(2)}"></label><button onclick="saveDirectorCrewRatesV758('${safe(id)}')">Save pay rates</button><p class="small muted">Existing timesheet rate snapshots are not rewritten when rates change.</p></div>
     <div class="card"><h3>📁 Documents &amp; certificates</h3><p class="small muted">Private documents attached to this crew member.</p><label>Upload document<input id="dp_file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"></label><label>Document category<select id="dp_docType"><option value="certificate">Certificate</option><option value="qualification">Qualification</option><option value="right_to_work">Right to work</option><option value="driving_licence">Driving licence</option><option value="other">Other</option></select></label><button onclick="uploadDirectorCrewDocumentV758('${safe(id)}')">Upload to profile</button><div style="margin-top:12px">${fileRows}</div></div>
     <div class="card"><h3>🦺 Health &amp; Safety compliance</h3><p class="small muted">Crew members acknowledge materials through My Profile → My Health &amp; Safety. H&amp;S compliance can be checked separately.</p></div>
@@ -4864,7 +4864,7 @@ window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.
         <div class="v757-section-label">Crew records</div>
         <div class="create-grid">
           <div class="create-card"><div class="create-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button onclick="newCrewMember()">＋ Add Crew</button></div>
-          <div class="create-card"><div class="create-icon">👥</div><h3>Crew Profiles</h3><p>One directory for All Crew, Regular Crew and Part Time Crew, with each person's details, documents and qualifications.</p><button onclick="openCrewProfilesV747()">Open Crew Profiles</button></div>
+          <div class="create-card"><div class="create-icon">👥</div><h3>Crew Profiles</h3><p>One directory for All Crew, Regular Crew and Part Time Crew, with each person's details, documents and qualifications.</p><button onclick="openCrewProfilesBV164()">Open Crew Profiles</button></div>
           <div class="create-card"><div class="create-icon">🦺</div><h3>Part Time Inductions</h3><p>Review induction submissions, acknowledgements and shareable induction links.</p><button onclick="openCasualCrewManagement()">Open Part Time Inductions</button></div>
           <div class="create-card"><div class="create-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button onclick="openAdminHours()">Open Crew Hours</button></div>
         </div>
@@ -4997,30 +4997,31 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  var bodyObserver=new MutationObserver(syncMenuControls);bodyObserver.observe(document.body,{attributes:true,attributeFilter:['class'],childList:true,subtree:true});
 })();
 </script>
-<style id="bv163-unified-crew-profiles">
-#modalBody .bv163-directory{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;align-items:start}
-#modalBody .bv163-side{background:var(--regency-panel-2,var(--card));border:1px solid var(--regency-border,var(--line));border-radius:12px;padding:10px;max-height:62vh;overflow:auto}
-#modalBody .bv163-side-title{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--regency-muted,var(--muted));padding:5px 7px 10px}
-#modalBody .bv163-person{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:9px 8px;margin:2px 0;border:0;border-radius:9px;background:transparent;color:var(--regency-text,var(--text));}
-#modalBody .bv163-person.active,#modalBody .bv163-person:hover{background:rgba(112,190,95,.13);outline:1px solid rgba(112,190,95,.35)}
-#modalBody .bv163-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:var(--regency-panel,var(--card));border:1px solid var(--regency-border,var(--line));font-weight:700}
-#modalBody .bv163-main{min-width:0}
-#modalBody .bv163-filters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
-#modalBody .bv163-filters button{width:auto}
-#modalBody .bv163-search{width:100%;margin:0 0 12px}
-#modalBody .bv163-table-wrap{overflow:auto;border:1px solid var(--regency-border,var(--line));border-radius:11px}
-#modalBody table.bv163-table{width:100%;border-collapse:collapse;min-width:520px}
-#modalBody .bv163-table th,#modalBody .bv163-table td{padding:11px 10px;text-align:left;border-bottom:1px solid var(--regency-border,var(--line));font-size:13px}
-#modalBody .bv163-table th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--regency-muted,var(--muted));background:var(--regency-panel-2,var(--card))}
-#modalBody .bv163-table tr:last-child td{border-bottom:0}
-#modalBody .bv163-type{display:inline-block;border-radius:20px;padding:4px 8px;background:rgba(112,190,95,.13);color:var(--regency-text,var(--text));font-size:11px;white-space:nowrap}
-#modalBody .bv163-profile-open{white-space:nowrap}
-#modalBody .bv163-doc-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-#modalBody .bv163-doc-form label{min-width:0}
-#modalBody .bv163-doc-form button{align-self:end}
-@media(max-width:650px){#modalBody .bv163-directory{grid-template-columns:1fr}#modalBody .bv163-side{max-height:180px}#modalBody .bv163-side-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}#modalBody .bv163-doc-form{grid-template-columns:1fr}}
+
+<style id="bv164-unified-crew-profiles">
+#modalBody .bv164-directory{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;align-items:start}
+#modalBody .bv164-side{background:var(--regency-panel-2,var(--card));border:1px solid var(--regency-border,var(--line));border-radius:12px;padding:10px;max-height:62vh;overflow:auto}
+#modalBody .bv164-side-title{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--regency-muted,var(--muted));padding:5px 7px 10px}
+#modalBody .bv164-person{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:9px 8px;margin:2px 0;border:0;border-radius:9px;background:transparent;color:var(--regency-text,var(--text))}
+#modalBody .bv164-person.active,#modalBody .bv164-person:hover{background:rgba(112,190,95,.13);outline:1px solid rgba(112,190,95,.35)}
+#modalBody .bv164-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:var(--regency-panel,var(--card));border:1px solid var(--regency-border,var(--line));font-weight:700}
+#modalBody .bv164-main{min-width:0}
+#modalBody .bv164-filters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 12px}
+#modalBody .bv164-filters button{width:auto}
+#modalBody .bv164-search{width:100%;margin:0 0 12px}
+#modalBody .bv164-table-wrap{overflow:auto;border:1px solid var(--regency-border,var(--line));border-radius:11px}
+#modalBody table.bv164-table{width:100%;border-collapse:collapse;min-width:520px}
+#modalBody .bv164-table th,#modalBody .bv164-table td{padding:11px 10px;text-align:left;border-bottom:1px solid var(--regency-border,var(--line));font-size:13px}
+#modalBody .bv164-table th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--regency-muted,var(--muted));background:var(--regency-panel-2,var(--card))}
+#modalBody .bv164-table tr:last-child td{border-bottom:0}
+#modalBody .bv164-type{display:inline-block;border-radius:20px;padding:4px 8px;background:rgba(112,190,95,.13);color:var(--regency-text,var(--text));font-size:11px;white-space:nowrap}
+#modalBody .bv164-profile-open{white-space:nowrap}
+#modalBody .bv164-doc-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#modalBody .bv164-doc-form label{min-width:0}
+#modalBody .bv164-doc-form button{align-self:end}
+@media(max-width:650px){#modalBody .bv164-directory{grid-template-columns:1fr}#modalBody .bv164-side{max-height:180px}#modalBody .bv164-side-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px}#modalBody .bv164-doc-form{grid-template-columns:1fr}}
 </style>
-<script id="bv163-unified-crew-profiles">
+<script id="bv164-unified-crew-profiles">
 (function(){
  'use strict';
  const escv=v=>typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -5029,33 +5030,34 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    const vals=[u.staffType,u.employmentType,u.employmentCategory,u.crewType].filter(Boolean).map(v=>String(v).toLowerCase().replace(/[_-]+/g,' ').trim());
    return vals.some(v=>['part time crew','part time','casual','casual crew'].includes(v))?'Part Time Crew':'Regular Crew';
  };
- const isDirector=()=>typeof window.isDirector==='function'&&window.isDirector();
- const modal=()=>document.getElementById('modalBody')||document.querySelector('.modal-content')||document.getElementById('modalContent');
+ const director=()=>typeof window.isDirector==='function'&&window.isDirector();
  let activeFilter='All Crew',activeSearch='';
- window.setCrewDirectoryFilterBV163=function(filter){activeFilter=filter;renderDirectory();};
- window.filterCrewDirectoryBV163=function(value){activeSearch=String(value||'');const input=document.getElementById('bv163-search');if(input)input.value=activeSearch;renderDirectory(false);};
- function renderDirectory(focusSearch){
-   if(!isDirector())return alert('Director access required.');
+ window.setCrewDirectoryFilterBV164=function(filter){activeFilter=filter;renderDirectory(false);};
+ window.filterCrewDirectoryBV164=function(value){activeSearch=String(value||'');renderDirectory(true);};
+ function renderDirectory(restoreSearch){
+   if(!director())return alert('Director access required.');
    const all=crewUsers(),filtered=all.filter(u=>(activeFilter==='All Crew'||crewType(u)===activeFilter)&&String(u.name||'').toLowerCase().includes(activeSearch.toLowerCase()));
    const sidebar=all.filter(u=>activeFilter==='All Crew'||crewType(u)===activeFilter);
-   const list=filtered.map(u=>{const w=typeof ensureWageSettings==='function'?ensureWageSettings(u):(u.wageSettings||{});const docs=typeof ensureV51==='function'?ensureV51().documents.filter(d=>String(d.userId)===String(u.id)).length:0;return `<tr><td><b>${escv(u.name)}</b></td><td><span class="bv163-type">${crewType(u)}</span></td><td>${escv(typeof roleLabel==='function'?roleLabel(u.role):u.role||'Crew')}</td><td>${docs}</td><td>${'£'+(Number(w.standardRate)||0).toFixed(2)}</td><td><button class="bv163-profile-open" onclick="openDirectorCrewProfileV758('${escv(u.id)}')">View profile</button></td></tr>`}).join('');
-   const side=sidebar.map(u=>`<button class="bv163-person" onclick="openDirectorCrewProfileV758('${escv(u.id)}')"><span class="bv163-avatar">${escv(String(u.name||'?').trim().charAt(0).toUpperCase())}</span><span style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis">${escv(u.name)}</b><small class="muted">${crewType(u)}</small></span></button>`).join('');
-   const m=modal();if(!m)return;
-   m.innerHTML=`<div class="section-head"><div><h2 style="margin:0">👥 Crew Profiles</h2><p class="muted" style="margin:5px 0 0">One directory for every crew member. Select a person to open their full profile.</p></div><button class="secondary" onclick="closeModal()">Close</button></div>
-    <div class="bv163-filters">${['All Crew','Regular Crew','Part Time Crew'].map(v=>`<button class="${activeFilter===v?'':'secondary'}" onclick="setCrewDirectoryFilterBV163('${v}')">${v}</button>`).join('')}</div>
-    <div class="bv163-directory"><aside class="bv163-side"><div class="bv163-side-title">Team members · ${sidebar.length}</div><div class="bv163-side-list">${side||'<p class="muted">No crew members in this category.</p>'}</div></aside>
-    <main class="bv163-main"><input id="bv163-search" class="bv163-search" placeholder="Search crew members…" value="${escv(activeSearch)}" oninput="filterCrewDirectoryBV163(this.value)"><div class="bv163-table-wrap"><table class="bv163-table"><thead><tr><th>Name</th><th>Employment</th><th>Role</th><th>Documents</th><th>Hourly rate</th><th></th></tr></thead><tbody>${list||'<tr><td colspan="6" class="muted">No crew members match this filter.</td></tr>'}</tbody></table></div></main></div>`;
-   if(focusSearch){const el=document.getElementById('bv163-search');if(el)el.focus();}
+   const list=filtered.map(u=>{const w=typeof ensureWageSettings==='function'?ensureWageSettings(u):(u.wageSettings||{});const docs=typeof ensureV51==='function'?ensureV51().documents.filter(d=>String(d.userId)===String(u.id)).length:0;return `<tr><td><b>${escv(u.name)}</b></td><td><span class="bv164-type">${crewType(u)}</span></td><td>${escv(typeof roleLabel==='function'?roleLabel(u.role):u.role||'Crew')}</td><td>${docs}</td><td>£${(Number(w.standardRate)||0).toFixed(2)}</td><td><button class="bv164-profile-open" onclick="openDirectorCrewProfileV758('${escv(u.id)}')">View profile</button></td></tr>`}).join('');
+   const side=sidebar.map(u=>`<button class="bv164-person" onclick="openDirectorCrewProfileV758('${escv(u.id)}')"><span class="bv164-avatar">${escv(String(u.name||'?').trim().charAt(0).toUpperCase())}</span><span style="min-width:0"><b style="display:block;overflow:hidden;text-overflow:ellipsis">${escv(u.name)}</b><small class="muted">${crewType(u)}</small></span></button>`).join('');
+   const body=`<div class="section-head"><div><h2 style="margin:0">👥 Crew Profiles</h2><p class="muted" style="margin:5px 0 0">One directory for every crew member. Select a person to open their full profile.</p></div><button class="secondary" onclick="closeModal()">Close</button></div>
+    <div class="bv164-filters">${['All Crew','Regular Crew','Part Time Crew'].map(v=>`<button class="${activeFilter===v?'':'secondary'}" onclick="setCrewDirectoryFilterBV164('${v}')">${v}</button>`).join('')}</div>
+    <div class="bv164-directory"><aside class="bv164-side"><div class="bv164-side-title">Team members · ${sidebar.length}</div><div class="bv164-side-list">${side||'<p class="muted">No crew members in this category.</p>'}</div></aside>
+    <main class="bv164-main"><input id="bv164-search" class="bv164-search" placeholder="Search crew members…" value="${escv(activeSearch)}" oninput="filterCrewDirectoryBV164(this.value)"><div class="bv164-table-wrap"><table class="bv164-table"><thead><tr><th>Name</th><th>Employment</th><th>Role</th><th>Documents</th><th>Hourly rate</th><th></th></tr></thead><tbody>${list||'<tr><td colspan="6" class="muted">No crew members match this filter.</td></tr>'}</tbody></table></div></main></div>`;
+   // IMPORTANT: openModal displays the modal sheet. Directly writing modalBody.innerHTML does not unhide #modal.
+   if(typeof window.openModal==='function')window.openModal(body);
+   else if(typeof openModal==='function')openModal(body);
+   if(restoreSearch){const input=document.getElementById('bv164-search');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length);}}
  }
- window.openCrewProfilesV747=function(){if(!isDirector())return alert('Director access required.');activeFilter='All Crew';activeSearch='';renderDirectory();};
+ window.openCrewProfilesBV164=function(){if(!director())return alert('Director access required.');activeFilter='All Crew';activeSearch='';renderDirectory(false);};
+ // Route all legacy profile-directory entries into the one unified directory.
+ window.openCrewProfilesV747=window.openCrewProfilesBV164;
+ window.openRegularCrewRecords=async function(){return window.openCrewProfilesBV164();};
 
- // The old document-register entry point now lands in the unified directory, not its legacy standalone form.
- window.openRegularCrewRecords=async function(){return window.openCrewProfilesV747();};
-
- // Add the existing private Supabase document register to each individual profile.
- window.renderPrivateCrewDocsBV163=async function(userId){
-   const host=document.getElementById('bv163-private-docs');if(!host)return;
-   if(!isDirector()){host.innerHTML='<p class="muted">Director access required.</p>';return;}
+ // Existing private Supabase compliance records are presented inside each person's profile.
+ window.renderPrivateCrewDocsBV164=async function(userId){
+   const host=document.getElementById('bv164-private-docs');if(!host)return;
+   if(!director()){host.innerHTML='<p class="muted">Director access required.</p>';return;}
    try{
      const {data:rows,error}=await supabaseClient.from('regency_crew_documents').select('*').eq('crew_user_id',String(userId)).order('uploaded_at',{ascending:false}).limit(200);
      if(error)throw error;
@@ -5066,35 +5068,34 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
      }).join('')||'<p class="small muted">No private compliance documents uploaded.</p>';
    }catch(e){host.innerHTML='<p class="small muted">Private document records could not be loaded: '+escv(e.message||e)+'</p>';}
  };
- window.uploadPrivateCrewDocBV163=async function(userId){
-   if(!isDirector())return alert('Director access required.');
-   const get=id=>document.getElementById(id),file=get('bv163-private-file')?.files?.[0],name=(get('bv163-private-name')?.value||'').trim(),type=get('bv163-private-type')?.value||'General document',expiry=get('bv163-private-expiry')?.value||null,u=crewUsers().find(x=>String(x.id)===String(userId));
+ window.uploadPrivateCrewDocBV164=async function(userId){
+   if(!director())return alert('Director access required.');
+   const get=id=>document.getElementById(id),file=get('bv164-private-file')?.files?.[0],name=(get('bv164-private-name')?.value||'').trim(),type=get('bv164-private-type')?.value||'General document',expiry=get('bv164-private-expiry')?.value||null,u=crewUsers().find(x=>String(x.id)===String(userId));
    if(!u||!file||!name)return alert('Enter a document name and choose a file.');
    if(file.size>20*1024*1024)return alert('The file must be 20 MB or smaller.');
    try{
-     const client=typeof supabaseClient!=='undefined'?supabaseClient:null;if(!client)throw new Error('Cloud connection is unavailable.');
      const path=`regency-events/${u.id}/${crypto.randomUUID()}.${(file.name.split('.').pop()||'file').toLowerCase()}`;
-     const {error:upError}=await client.storage.from('regency-crew-docs').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
+     const {error:upError}=await supabaseClient.storage.from('regency-crew-docs').upload(path,file,{upsert:false,contentType:file.type||'application/octet-stream'});
      if(upError)throw upError;
-     const {data:auth}=await client.auth.getUser();
-     const {error:upd}=await client.from('regency_crew_documents').update({is_latest:false}).eq('crew_user_id',String(u.id)).eq('document_type',type).eq('is_latest',true);
+     const {data:auth}=await supabaseClient.auth.getUser();
+     const {error:upd}=await supabaseClient.from('regency_crew_documents').update({is_latest:false}).eq('crew_user_id',String(u.id)).eq('document_type',type).eq('is_latest',true);
      if(upd)throw upd;
-     const {error:ins}=await client.from('regency_crew_documents').insert({crew_user_id:String(u.id),crew_name:u.name,document_type:type,document_name:name,storage_path:path,expiry_date:expiry,uploaded_by:auth.user.id,is_latest:true});
+     const {error:ins}=await supabaseClient.from('regency_crew_documents').insert({crew_user_id:String(u.id),crew_name:u.name,document_type:type,document_name:name,storage_path:path,expiry_date:expiry,uploaded_by:auth.user.id,is_latest:true});
      if(ins)throw ins;
-     await window.renderPrivateCrewDocsBV163(userId);alert('Document uploaded securely. Previous versions remain in the history.');
+     await window.renderPrivateCrewDocsBV164(userId);alert('Document uploaded securely. Previous versions remain in the history.');
    }catch(e){alert('Document upload failed: '+(e.message||e));}
  };
- // Wrap the existing full profile so existing personal details, pay, V51 files and H&S stay intact.
  const oldProfile=window.openDirectorCrewProfileV758;
  if(typeof oldProfile==='function'){
    window.openDirectorCrewProfileV758=function(id){
      oldProfile(id);
-     const m=modal();if(!m)return;
-     const section=document.createElement('div');section.className='card';section.innerHTML=`<h3>📂 Private compliance documents</h3><p class="small muted">Driving licences, certificates and other private crew records. Previous versions and expiry dates are retained.</p><div class="bv163-doc-form"><label>Document type<select id="bv163-private-type"><option>Driving licence</option><option>Qualification / certificate</option><option>First aid</option><option>Risk assessment / H&amp;S</option><option>Insurance</option><option>General document</option></select></label><label>Document name<input id="bv163-private-name" maxlength="180" placeholder="e.g. IPAF certificate"></label><label>Expiry date (optional)<input id="bv163-private-expiry" type="date"></label><label>File (PDF, JPG, PNG, WEBP, DOC or DOCX, max 20 MB)<input id="bv163-private-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"></label><button onclick="uploadPrivateCrewDocBV163('${escv(id)}')">Upload document</button></div><div id="bv163-private-docs" style="margin-top:12px">Loading private records…</div>`;
-     m.appendChild(section);window.renderPrivateCrewDocsBV163(id);
+     const host=document.getElementById('modalBody');if(!host)return;
+     const section=document.createElement('div');section.className='card';section.innerHTML=`<h3>📂 Private compliance documents</h3><p class="small muted">Driving licences, certificates and other private crew records. Previous versions and expiry dates are retained.</p><div class="bv164-doc-form"><label>Document type<select id="bv164-private-type"><option>Driving licence</option><option>Qualification / certificate</option><option>First aid</option><option>Risk assessment / H&amp;S</option><option>Insurance</option><option>General document</option></select></label><label>Document name<input id="bv164-private-name" maxlength="180" placeholder="e.g. IPAF certificate"></label><label>Expiry date (optional)<input id="bv164-private-expiry" type="date"></label><label>File (PDF, JPG, PNG, WEBP, DOC or DOCX, max 20 MB)<input id="bv164-private-file" type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"></label><button onclick="uploadPrivateCrewDocBV164('${escv(id)}')">Upload document</button></div><div id="bv164-private-docs" style="margin-top:12px">Loading private records…</div>`;
+     host.appendChild(section);window.renderPrivateCrewDocsBV164(id);
    };
  }
 })();
 </script>
+
 </body>
 </html>
