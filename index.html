@@ -54,7 +54,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg">
-<title>BV1.7.5 · Regency Events Backstage</title>
+<title>BV1.7.6 · Regency Events Backstage</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
@@ -612,7 +612,7 @@ body.light-theme #themeFaderControl .tf-mode{color:#087c42!important;}
 :root{--cal-red:#d71936;--cal-blue:#087beA;--cal-green:#079b50;--cal-line:var(--regency-border,#263b32)}
 #backstageMenuButton{position:fixed;top:10px;left:10px;z-index:6102;width:42px;height:42px;border-radius:12px;background:#0b1714!important;border:1px solid #315143!important;color:#fff!important;font-size:23px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px #0005;padding:0}
 #backstageMenuOverlay{position:fixed;inset:0;background:#0009;z-index:6100;opacity:0;visibility:hidden;transition:opacity .22s ease,visibility .22s ease}
-#backstageMenuDrawer{position:fixed;z-index:6101;inset:0 auto 0 0;width:min(84vw,340px);max-width:340px;background:#08110e;color:#f4f7f5;border-right:1px solid #284437;box-shadow:15px 0 45px #0008;transform:translateX(-105%);transition:transform .24s ease;overflow-y:auto;padding:18px 14px calc(90px + env(safe-area-inset-bottom));;display:flex;flex-direction:column;}
+#backstageMenuDrawer{position:fixed;z-index:6101;inset:0 auto 0 0;width:min(84vw,340px);max-width:340px;background:#08110e;color:#f4f7f5;border-right:1px solid #284437;box-shadow:15px 0 45px #0008;transform:translateX(-105%);transition:transform .24s ease;overflow-y:auto;padding:18px 14px calc(90px + env(safe-area-inset-bottom));}
 body.backstage-menu-open #backstageMenuOverlay{opacity:1;visibility:visible}body.backstage-menu-open #backstageMenuDrawer{transform:translateX(0)}
 .menu-drawer-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 2px 15px;border-bottom:1px solid #20352a;margin-bottom:12px}.menu-drawer-head strong{font-size:20px}.menu-drawer-head small{display:block;color:#9eafa6;font-size:11px;margin-top:3px}.menu-drawer-close{width:36px;height:36px;border-radius:10px!important;padding:0!important;font-size:20px!important}
 .menu-drawer-label{font-size:10px;letter-spacing:1.3px;color:#8ca397;font-weight:800;margin:16px 8px 7px}.menu-drawer-link{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid transparent!important;border-radius:11px!important;padding:11px 12px!important;margin:3px 0;background:transparent!important;color:#e7eee9!important;font-size:14px!important;box-shadow:none!important}.menu-drawer-link .menu-icon{width:25px;text-align:center;font-size:18px}.menu-drawer-link.active,.menu-drawer-link:hover{background:#123324!important;border-color:#205d3b!important;color:#5af0ae!important}
@@ -988,11 +988,6 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
 .cust-picker-individual{flex-direction:row;align-items:center;cursor:pointer}
 .cust-picker-individual .cust-card-initials{border-radius:50%}
 </style>
-<style id="bv175-release-footer">
-/* BV1.7.5 release stamp: remain visible at the bottom of the menu on mobile and desktop. */
-#backstageMenuDrawer{display:flex;flex-direction:column}
-#backstage-app-version{position:sticky;bottom:0;z-index:2;flex:0 0 auto;margin-top:auto!important;padding:12px 8px calc(10px + env(safe-area-inset-bottom))!important;background:#08110e;border-top:1px solid #284437!important;box-shadow:0 -8px 14px #08110e;color:#9aada2!important}
-</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1016,7 +1011,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.7.5" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.5</div>
+<div id="backstage-app-version" data-release="BV1.7.6" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.6</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -4476,7 +4471,6 @@ const css=document.createElement('style');css.textContent='#staffCalendar .v746-
   const director=typeof isDirector==='function'&&isDirector();
   el.innerHTML=`<div class="card"><div class="section-head"><div><h2 style="margin:0">👥 Crew Management</h2><div class="muted">Your crew tools, grouped into clear work areas.</div></div></div>
    <div class="v757-section-label">Quick access</div><div class="v757-tiles">
-    <div class="v757-tile"><div class="v757-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button ${director?'':'disabled'} onclick="newCrewMember()">＋ Add Crew</button></div>
     <div class="v757-tile"><div class="v757-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button ${director?'':'disabled'} onclick="openAdminHours()">Open Crew Hours</button></div>
     <div class="v757-tile"><div class="v757-icon">🧑‍🤝‍🧑</div><h3>Manage Crew</h3><p>Open the crew workspace for records, requests, inductions and access settings.</p><button ${director?'':'disabled'} onclick="openCrewManagementHub()">Open Manage Crew</button></div>
    </div>${director?'':'<p class="small muted" style="margin-top:12px">Some crew administration tools require Director access.</p>'}</div>`;
@@ -4941,8 +4935,7 @@ window.anchorCrewCalendarV753=function(v){if(!v)return;anchor=fromKey(v);window.
         <div class="section-head"><div><h2 style="margin:0">👥 Crew Management</h2><div class="muted">All crew administration in one place.</div></div></div>
         <div class="v757-section-label">Crew records</div>
         <div class="create-grid">
-          <div class="create-card"><div class="create-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button onclick="newCrewMember()">＋ Add Crew</button></div>
-          <div class="create-card"><div class="create-icon">📁</div><h3>Regular Crew Profiles</h3><p>Manage crew details, documents, qualifications and expiry dates.</p><button onclick="openRegularCrewRecords()">Open Crew Profiles</button></div>
+               <div class="create-card"><div class="create-icon">📁</div><h3>Regular Crew Profiles</h3><p>Manage crew details, documents, qualifications and expiry dates.</p><button onclick="openRegularCrewRecords()">Open Crew Profiles</button></div>
           <div class="create-card"><div class="create-icon">🦺</div><h3>Part Time Crew</h3><p>Manage casual crew inductions, acknowledgements and induction links.</p><button onclick="openCasualCrewManagement()">Open Part Time Crew</button></div>
           <div class="create-card"><div class="create-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button onclick="openAdminHours()">Open Crew Hours</button></div>
         </div>
@@ -5193,7 +5186,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    el.innerHTML=`<div class="card"><div class="section-head"><div><h2 style="margin:0">👥 Crew Management</h2><div class="muted">All crew administration in one place.</div></div></div>
     <div class="v757-section-label">Crew records</div>
     <div class="bv165-hub-grid">
-     <div class="create-card"><div class="create-icon">➕</div><h3>Add Crew</h3><p>Add a crew member and set their role and login PIN.</p><button onclick="newCrewMember()">＋ Add Crew</button></div>
      <div class="create-card"><div class="create-icon">👥</div><h3>Crew Profiles</h3><p>One directory for All Crew, Regular Crew and Part Time Crew.</p><button onclick="openCrewProfilesBV165()">Open Crew Profiles</button></div>
      <div class="create-card"><div class="create-icon">🦺</div><h3>Part Time Inductions</h3><p>Review induction submissions, acknowledgements and induction links.</p><button onclick="openCasualCrewManagement()">Open Part Time Inductions</button></div>
      <div class="create-card"><div class="create-icon">⏱️</div><h3>Crew Hours</h3><p>Review timesheets, approve hours and export records.</p><button onclick="openAdminHours()">Open Crew Hours</button></div>
@@ -5373,7 +5365,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  .cust-booking-picker-row{display:flex;gap:8px;flex-wrap:wrap}
  .cust-booking-picker-row button{width:auto!important;flex:1 1 180px;background:#14271f!important;border:1px solid #355343!important;color:#dce8e0!important}
  .cust-booking-selected{font-size:12px;color:#a9bdb0;margin-top:8px}
- #backstage-app-version{position:sticky;bottom:0;z-index:5;background:#08110e!important;border-top:1px solid #355343!important;color:#a9bdb0!important;font-size:12px!important;font-weight:800;letter-spacing:1px;padding:14px 8px calc(14px + env(safe-area-inset-bottom))!important;text-align:center}
  #customers .cust-contact-search{margin:8px 0 12px}
  #customers .cust-contact-search input{width:100%;box-sizing:border-box}
  .cust-picker-results{display:grid;gap:6px;max-height:52vh;overflow:auto;margin-top:10px}
@@ -5388,8 +5379,33 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
  window.selectCustomerBV170=id=>{state.selected=id;state.tab='profile';renderCustomerDirectoryBV170()};window.setCustomerTabBV170=t=>{state.tab=t;renderCustomerDirectoryBV170()};window.filterCustomersBV170=f=>{state.filter=f;renderCustomerDirectoryBV170()};window.searchCustomersBV170=q=>{state.search=q;renderCustomerDirectoryBV170();const el=document.querySelector('#customers .cust-search');if(el){el.focus();el.setSelectionRange(q.length,q.length)}};
  window.newCustomerBV170=function(type){const org=type==='organisation';openModal(`<h2>＋ New ${org?'Organisation':'Individual'}</h2><label>${org?'Organisation name':'Full name'}<input id="c170-name" maxlength="160"></label>${org?'<label>Organisation photo / logo<input id="c170-photo" type="file" accept="image/*"></label>':''}<div class="cust-form-grid"><label>Telephone<input id="c170-phone" type="tel"></label><label>Email<input id="c170-email" type="email"></label><label>Address<input id="c170-address"></label><label>Billing address<input id="c170-billing"></label></div><label>Internal notes<textarea id="c170-notes"></textarea></label><div class="cust-form-actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="createCustomerBV170('${type}')">Create Customer</button></div>`)};
  window.createCustomerBV170=async function(type){const name=document.getElementById('c170-name')?.value.trim();if(!name)return alert('Enter a customer name.');const photoInput=document.getElementById('c170-photo');let photo='';if(photoInput?.files?.[0]){if(photoInput.files[0].size>5*1024*1024)return alert('Please use an image smaller than 5 MB.');photo=await readPhoto(photoInput.files[0])}const c={id:uid(),type,name,phone:document.getElementById('c170-phone')?.value||'',email:document.getElementById('c170-email')?.value||'',address:document.getElementById('c170-address')?.value||'',billingAddress:document.getElementById('c170-billing')?.value||'',notes:document.getElementById('c170-notes')?.value||'',photo,contacts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};list().push(c);save();state.selected=c.id;state.tab='profile';closeModal();renderCustomerDirectoryBV170()};
- window.editCustomerBV170=function(id){const c=list().find(x=>String(x.id)===String(id));if(!c)return;openModal(`<h2>Edit ${c.type==='organisation'?'Organisation':'Individual'}</h2><label>Name<input id="ce-name" value="${esc(c.name)}"></label>${c.type==='organisation'?`<label>Change photo / logo<input id="ce-photo" type="file" accept="image/*"></label><label><input type="checkbox" id="ce-remove-photo"> Remove current photo</label>`:''}<label>Telephone<input id="ce-phone" value="${esc(c.phone||'')}"></label><label>Email<input id="ce-email" value="${esc(c.email||'')}"></label><label>Address<input id="ce-address" value="${esc(c.address||'')}"></label><label>Billing address<input id="ce-billing" value="${esc(c.billingAddress||'')}"></label><div class="cust-form-actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="updateCustomerBV170('${esc(id)}')">Save Changes</button></div>`)};
+ window.editCustomerBV170=function(id){const c=list().find(x=>String(x.id)===String(id));if(!c)return;openModal(`<h2>Edit ${c.type==='organisation'?'Organisation':'Individual'}</h2><label>Name<input id="ce-name" value="${esc(c.name)}"></label>${c.type==='organisation'?`<label>Change photo / logo<input id="ce-photo" type="file" accept="image/*"></label><label><input type="checkbox" id="ce-remove-photo"> Remove current photo</label>`:''}<label>Telephone<input id="ce-phone" value="${esc(c.phone||'')}"></label><label>Email<input id="ce-email" value="${esc(c.email||'')}"></label><label>Address<input id="ce-address" value="${esc(c.address||'')}"></label><label>Billing address<input id="ce-billing" value="${esc(c.billingAddress||'')}"></label><div class="cust-form-actions"><button class="secondary" onclick="closeModal()">Cancel</button><button onclick="updateCustomerBV170('${esc(id)}')">Save Changes</button><button type="button" onclick="deleteCustomerBV170('${esc(id)}')" style="background:#6f2929!important;border:1px solid #a34b4b!important;color:#fff!important">Delete ${c.type==='organisation'?'Organisation':'Individual'}</button></div>`)};
  window.updateCustomerBV170=async function(id){const c=list().find(x=>String(x.id)===String(id));if(!c)return;const name=document.getElementById('ce-name')?.value.trim();if(!name)return alert('Enter a name.');c.name=name;c.phone=document.getElementById('ce-phone')?.value||'';c.email=document.getElementById('ce-email')?.value||'';c.address=document.getElementById('ce-address')?.value||'';c.billingAddress=document.getElementById('ce-billing')?.value||'';if(document.getElementById('ce-remove-photo')?.checked)c.photo='';const f=document.getElementById('ce-photo')?.files?.[0];if(f){if(f.size>5*1024*1024)return alert('Please use an image smaller than 5 MB.');c.photo=await readPhoto(f)}c.updatedAt=new Date().toISOString();save();closeModal();renderCustomerDirectoryBV170()};
+
+ window.deleteCustomerBV170=function(id){
+  const c=list().find(x=>String(x.id)===String(id));if(!c)return;
+  const childIds=c.type==='organisation'?(Array.isArray(c.contacts)?c.contacts.map(x=>String(x.id)).filter(Boolean):[]):[];
+  const ids=new Set([String(c.id),...childIds]);
+  const sources=['events','jobs','portalooJobs','hireVehicles','vehicleHires','hireBookings'];
+  const refs=[];
+  const walk=(value,path,seen)=>{
+   if(!value||typeof value!=='object'||seen.has(value))return;seen.add(value);
+   if(Array.isArray(value)){value.forEach((v,i)=>walk(v,path+'['+i+']',seen));return;}
+   for(const [key,v] of Object.entries(value)){
+    if((key==='customerId'||key==='contactId'||key==='organisationId'||key==='parentCustomerId')&&v!=null&&ids.has(String(v)))refs.push(path+'.'+key);
+    else if(v&&typeof v==='object')walk(v,path+'.'+key,seen);
+   }
+  };
+  sources.forEach(k=>{const rows=data&&data[k];if(Array.isArray(rows))rows.forEach((r,i)=>walk(r,k+'['+i+']',new Set()))});
+  if(refs.length){alert('This customer is linked to existing bookings. To protect your booking history, the profile cannot be deleted yet. Remove or change the customer link on those bookings first.');return;}
+  const contactCount=childIds.length;
+  const message=c.type==='organisation'?'Delete the organisation "'+c.name+'" and its '+contactCount+' linked contact'+(contactCount===1?'':'s')+'? This cannot be undone.':'Delete the individual customer "'+c.name+'"? This cannot be undone.';
+  if(!confirm(message))return;
+  if(c.type==='organisation'){list().forEach(org=>{if(org!==c&&Array.isArray(org.contacts))org.contacts=org.contacts.filter(x=>!ids.has(String(x.id)));});}
+  else{list().forEach(org=>{if(Array.isArray(org.contacts))org.contacts=org.contacts.filter(x=>String(x.id)!==String(id));});}
+  const pos=list().findIndex(x=>String(x.id)===String(id));if(pos>=0)list().splice(pos,1);
+  save();state.selected=null;state.tab='profile';closeModal();renderCustomerDirectoryBV170();
+ };
  window.saveCustomerNotesBV170=id=>{const c=list().find(x=>String(x.id)===String(id));if(!c)return;c.notes=document.getElementById('cust-notes')?.value||'';c.updatedAt=new Date().toISOString();save();alert('Customer notes saved.')};
  window.addCustomerContactBV170=id=>{openModal(`<h2>Add Organisation Contact</h2><label>Name<input id="cc-name"></label><label>Job title / role<input id="cc-role"></label><label>Telephone<input id="cc-phone"></label><label>Email<input id="cc-email" type="email"></label><button onclick="saveCustomerContactBV170('${esc(id)}')">Add Contact</button>`)};
  window.saveCustomerContactBV170=id=>{const c=list().find(x=>String(x.id)===String(id));const name=document.getElementById('cc-name')?.value.trim();if(!c||!name)return alert('Enter a contact name.');c.contacts=Array.isArray(c.contacts)?c.contacts:[];c.contacts.push({id:uid(),name,role:document.getElementById('cc-role')?.value||'',phone:document.getElementById('cc-phone')?.value||'',email:document.getElementById('cc-email')?.value||''});save();closeModal();state.tab='contacts';renderCustomerDirectoryBV170()};
@@ -5435,7 +5451,7 @@ window.prepareBookingCustomerBV175=function(kind){const el=id=>document.getEleme
 window.chooseCustomerContactBV172=function(kind,index){const x=window._custPickerResultsBV172?.[index];if(!x)return;const set=(id,val)=>{const e=document.getElementById(id);if(e)e.value=val||''};set(kind+'-customer-select',x.customerId);const type=x.type==='organisation'||x.type==='contact'?'organisation':'individual';set(kind+'-customer-type',type);window.toggleBookingCustomerTypeBV175(kind);set(kind+'-organisation-name',x.organisation||x.company||'');set(kind+'-contact-name',x.type==='organisation'?'':x.name);set(kind+'-contact-email',x.email);set(kind+'-contact-phone',x.phone);const badge=document.getElementById(kind+'-customer-selected');if(badge)badge.textContent=x.type==='organisation'?x.name+' · Organisation selected':x.name+' · '+(x.organisation||'Individual');closeModal();};
  window.selectBookingCustomerBV170=function(kind,id){const c=list().find(x=>String(x.id)===String(id));if(!c)return;const map=kind==='event'?{name:'e_customer',phone:'e_phone',email:'e_email'}:kind==='hire'?{name:'hv_customer'}:{name:'p_customer_name',company:'p_customer_company',phone:'p_customer_phone',email:'p_customer_email'};if(document.getElementById(map.name))document.getElementById(map.name).value=c.name;if(map.company&&document.getElementById(map.company))document.getElementById(map.company).value=c.type==='organisation'?c.name:'';if(document.getElementById(map.phone))document.getElementById(map.phone).value=c.phone||'';if(document.getElementById(map.email))document.getElementById(map.email).value=c.email||'';};
  window.newCustomerFromBookingBV170=function(kind){const name=prompt('Customer or organisation name:');if(!name||!name.trim())return;const type=confirm('Is this an organisation? Select OK for Organisation or Cancel for Individual.')?'organisation':'individual';const phone=prompt('Telephone number (optional):')||'';const email=prompt('Email address (optional):')||'';const c={id:uid(),type,name:name.trim(),phone,email,address:'',billingAddress:'',notes:'',photo:'',contacts:[],createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};list().push(c);save();const sel=document.getElementById(kind+'-customer-select');if(sel){const opt=document.createElement('option');opt.value=c.id;opt.textContent=c.name+' · '+(type==='organisation'?'Organisation':'Individual');sel.appendChild(opt);sel.value=c.id;}selectBookingCustomerBV170(kind,c.id)};
- // BV1.7.5 Stage 1: consistent customer / organisation relationship helpers.
+ // BV1.7.6 Stage 1: consistent customer / organisation relationship helpers.
  // Organisation records own contacts; each contact has its own name, email and phone.
  window.backstageCustomerFindOrganisationBV175=function(name){
    const term=String(name||'').trim().toLowerCase();
