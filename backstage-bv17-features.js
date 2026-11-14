@@ -5,7 +5,7 @@
  const esc=s=>typeof window.esc==='function'?window.esc(String(s??'')):String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const save=()=>{if(typeof window.save==='function')window.save();else if(typeof window.persist==='function')window.persist();};
  const arr=x=>Array.isArray(x)?x:[];
- function state(){if(!window.data)throw new Error('Backstage data is not ready.');data.customers=arr(data.customers);data.customerContacts=arr(data.customerContacts);data.vans=arr(data.vans);data.vehicleMaintenance=arr(data.vehicleMaintenance);data.vehicleDefects=arr(data.vehicleDefects);return data;}
+ function state(){if(typeof data==='undefined'||!data)throw new Error('Backstage data is not ready.');data.customers=arr(data.customers);data.customerContacts=arr(data.customerContacts);data.vans=arr(data.vans);data.vehicleMaintenance=arr(data.vehicleMaintenance);data.vehicleDefects=arr(data.vehicleDefects);return data;}
  const uid=p=>p+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7);
  const director=()=>typeof window.isDirector==='function'&&window.isDirector();
  const typeName=t=>t==='organisation'?'Organisation':'Individual customer';
