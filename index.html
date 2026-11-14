@@ -1,6 +1,49 @@
 <!doctype html>
 <html lang="en">
 <head>
+<script id="backstage-diagnostics-bv171">
+/* Backstage diagnostic catcher: reports JavaScript failures in a readable on-screen panel. */
+(function(){
+  if(window.__backstageDiagnosticsBV171)return;
+  window.__backstageDiagnosticsBV171=true;
+  var pending=[], panel=null, count=0;
+  function show(item){
+    count++;
+    if(!document.body){pending.push(item);return;}
+    if(!panel){
+      panel=document.createElement('div');
+      panel.id='backstage-error-panel-bv171';
+      panel.style.cssText='position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:16px;font:14px system-ui,sans-serif;color:#f8fafc';
+      var card=document.createElement('div');
+      card.style.cssText='width:min(680px,100%);max-height:85vh;overflow:auto;background:#17231d;border:2px solid #d97706;border-radius:14px;padding:18px;box-shadow:0 12px 50px #0009';
+      var heading=document.createElement('h2');heading.textContent='Backstage has detected an error';heading.style.cssText='margin:0 0 8px;color:#fff;font-size:19px';
+      var intro=document.createElement('p');intro.textContent='Please take a screenshot of this message and send it to ChatGPT. The details below should help identify what went wrong.';intro.style.cssText='margin:0 0 12px;color:#d1d5db;line-height:1.45';
+      var details=document.createElement('pre');details.id='backstage-error-details-bv171';details.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;background:#0b120e;color:#fca5a5;padding:12px;border-radius:8px;font:12px/1.45 ui-monospace,monospace;max-height:45vh;overflow:auto;margin:0 0 14px';
+      var buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap';
+      var close=document.createElement('button');close.type='button';close.textContent='Close';close.style.cssText='padding:10px 18px;border:0;border-radius:8px;background:#d1d5db;color:#111;font-weight:700';close.onclick=function(){panel.style.display='none';};
+      var copy=document.createElement('button');copy.type='button';copy.textContent='Copy error details';copy.style.cssText='padding:10px 18px;border:0;border-radius:8px;background:#2f6849;color:white;font-weight:700';copy.onclick=function(){var t=details.textContent;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){copy.textContent='Copied';}).catch(function(){copy.textContent='Please screenshot';});}else{copy.textContent='Please screenshot';}};
+      buttons.appendChild(close);buttons.appendChild(copy);card.appendChild(heading);card.appendChild(intro);card.appendChild(details);card.appendChild(buttons);panel.appendChild(card);document.body.appendChild(panel);
+    }
+    panel.style.display='flex';
+    var details=document.getElementById('backstage-error-details-bv171');
+    var text='Error '+count+': '+item.message;
+    if(item.source)text+='\nFile: '+item.source;
+    if(item.line)text+='\nLine: '+item.line+(item.column?':'+item.column:'');
+    if(item.stack)text+='\n\nStack:\n'+item.stack;
+    details.textContent=(details.textContent?details.textContent+'\n\n--------------------\n\n':'')+text;
+  }
+  window.addEventListener('error',function(e){
+    if(e&&e.message)show({message:e.message,source:e.filename||'',line:e.lineno||'',column:e.colno||'',stack:e.error&&e.error.stack||''});
+  });
+  window.addEventListener('unhandledrejection',function(e){
+    var r=e&&e.reason, msg=(r&&(r.message||String(r)))||'Unhandled promise rejection';
+    show({message:'Unhandled promise rejection: '+msg,stack:r&&r.stack||''});
+  });
+  function flush(){while(pending.length)show(pending.shift());}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',flush,{once:true});else flush();
+})();
+</script>
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#111111">
@@ -11,7 +54,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg">
-<title>BV1.6.6 Vehicle Profiles · Regency Events Backstage</title>
+<title>BV1.7.1 Diagnostics · Regency Events Backstage</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
@@ -951,7 +994,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.7.0" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.0</div>
+<div id="backstage-app-version" data-release="BV1.7.1" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.1</div>
 </aside>
 <main>
 <section id="dashboard"></section>
