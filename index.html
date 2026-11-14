@@ -11,7 +11,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg">
-<title>Regency Events Backstage</title>
+<title>BV1.6.6 Vehicle Profiles · Regency Events Backstage</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
@@ -1791,6 +1791,7 @@ window.exportReport=function(key){
  const arr=(v)=>Array.isArray(v)?v:[];
  const today=()=>new Date().toISOString().slice(0,10);
  const id=()=>('vm_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
+ const state={tab:'profile'};
  function store(){
    if(typeof data!=='object'||!data)throw new Error('Backstage data is not ready yet. Refresh the app and try again.');
    data.vehicleMaintenance=arr(data.vehicleMaintenance);
@@ -1799,6 +1800,7 @@ window.exportReport=function(key){
    return data;
  }
  function vehicleName(v){return [v.name||'Unnamed vehicle',v.registration||v.asset||''].filter(Boolean).join(' · ')}
+ function safe(v){return typeof esc==='function'?esc(String(v??'')):String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  function saveData(){
    if(typeof save==='function')save();
    else localStorage.setItem('avtracker_v1',JSON.stringify(data));
@@ -1806,6 +1808,7 @@ window.exportReport=function(key){
  function userName(){
    try{const u=typeof currentUser==='function'?currentUser():null;return u?.name||u?.displayName||'Crew member'}catch(_){return 'Crew member'}
  }
+ function infoRows(rows){return rows.filter(x=>x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!=='').map(([k,v])=>`<div class="vm-info-row"><span>${safe(k)}</span><b>${safe(v)}</b></div>`).join('')||'<p class="vm-muted">No additional vehicle details are recorded.</p>'}
  function render(){
    const host=document.getElementById('vehicleMaintenance');if(!host)return;
    try{
@@ -1816,85 +1819,88 @@ window.exportReport=function(key){
      const defects=s.vehicleDefects.filter(r=>String(r.vehicleId)===String(window._vmSelectedId)).sort((a,b)=>String(b.reportedAt||'').localeCompare(String(a.reportedAt||'')));
      const open=defects.filter(d=>d.status!=='Closed');
      const critical=open.filter(d=>d.priority==='Critical').length;
-     host.innerHTML=`
-      <style>
-       #vehicleMaintenance .vm-card{background:#102219;border:1px solid #294737;border-radius:15px;padding:15px;margin:12px 0}
-       #vehicleMaintenance .vm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-       #vehicleMaintenance .vm-grid label{display:block;min-width:0}
-       #vehicleMaintenance label{font-size:14px;color:#c7d7cc}
-       #vehicleMaintenance input,#vehicleMaintenance select,#vehicleMaintenance textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;background:#08130e;color:#f1f6f2;border:1px solid #355343;border-radius:9px;padding:11px;font:inherit}
-       #vehicleMaintenance textarea{min-height:85px;resize:vertical}
-       #vehicleMaintenance .vm-record{background:#0b1911;border:1px solid #294737;border-radius:11px;padding:12px;margin:9px 0}
-       #vehicleMaintenance .vm-muted{color:#aebfb4;font-size:13px}
-       #vehicleMaintenance .vm-tag{display:inline-block;border-radius:20px;padding:4px 9px;background:#1b3d2c;color:#c7f0d5;font-size:12px;font-weight:700}
-       #vehicleMaintenance .vm-tag.red{background:#572626;color:#ffd0d0}
-       #vehicleMaintenance .vm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-       #vehicleMaintenance button{margin-top:8px}
-       @media(max-width:560px){#vehicleMaintenance .vm-grid{grid-template-columns:1fr}}
-      </style>
-      <div class="card vm-card">
-       <h2 style="margin:0 0 8px">🔧 Vehicle Maintenance</h2>
-       <p class="vm-muted">A simple service log and fault tracker for each fleet vehicle.</p>
-       <label>Select vehicle
-        <select id="vmVehicleSelect" onchange="window.vmSelectVehicle(this.value)">
-         ${vehicles.map(v=>`<option value="${esc(v.id)}" ${String(v.id)===String(window._vmSelectedId)?'selected':''}>${esc(vehicleName(v))}</option>`).join('')}
-        </select>
-       </label>
-       ${selected?`<p style="margin:12px 0 0"><b>${esc(vehicleName(selected))}</b> ${critical?'<span class="vm-tag red">OUT OF SERVICE · CRITICAL DEFECT</span>':'<span class="vm-tag">FLEET RECORD</span>'}</p>`:'<p>No vehicles found. Add vehicles under Equipment & Vehicles first.</p>'}
-      </div>
-      ${selected?`
-       <div class="vm-grid">
-        <div class="vm-card"><b style="font-size:25px">${services.length}</b><div class="vm-muted">Service records</div></div>
-        <div class="vm-card"><b style="font-size:25px">${open.length}</b><div class="vm-muted">Open problems</div></div>
-       </div>
-       ${critical?'<div class="vm-card" style="border-color:#a33;background:#321b1b"><b style="color:#ffc4c4">⚠ Critical defect recorded. Do not use this vehicle until checked and cleared.</b></div>':''}
-       <div class="vm-card">
-        <h3 style="margin-top:0">＋ Add service / work record</h3>
-        <form onsubmit="window.vmAddService(event)">
-         <div class="vm-grid">
-          <label>Work type<select name="type"><option>Routine service</option><option>Repair</option><option>Tyres</option><option>Brakes</option><option>Inspection</option><option>Other</option></select></label>
-          <label>Status<select name="status"><option value="Planned">To be done</option><option value="Completed">Completed</option></select></label>
-          <label>Date<input type="date" name="date" value="${today()}" required></label>
-          <label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label>
-          <label>Garage / mechanic<input name="provider" placeholder="Optional"></label>
-          <label>Cost (£)<input type="number" min="0" step="0.01" name="cost" placeholder="Optional"></label>
-         </div>
-         <label style="display:block;margin-top:10px">Work details<textarea name="description" required placeholder="What needs doing, or what work was completed?"></textarea></label>
-         <button type="submit">Save service record</button>
-        </form>
-       </div>
-       <div class="vm-card" id="vmDefectForm">
-        <h3 style="margin-top:0">⚠ Report damage / problem</h3>
-        <form onsubmit="window.vmAddDefect(event)">
-         <div class="vm-grid">
-          <label>Priority<select name="priority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label>
-          <label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label>
-         </div>
-         <label style="display:block;margin-top:10px">Problem<textarea name="description" required placeholder="Describe the fault or damage"></textarea></label>
-         <button type="submit" class="danger">Submit problem</button>
-        </form>
-       </div>
-       <div class="vm-card">
-        <h3 style="margin-top:0">Service history</h3>
-        ${services.length?services.map(r=>`<div class="vm-record"><div><b>${esc(r.type)} · ${esc(r.date)}</b> <span class="vm-tag">${esc(r.status)}</span></div><p>${esc(r.description)}</p><div class="vm-muted">${r.mileage?'Mileage: '+esc(r.mileage)+' · ':''}${r.provider?'Garage: '+esc(r.provider)+' · ':''}${r.cost?'Cost: £'+Number(r.cost).toFixed(2):''}</div></div>`).join(''):'<p class="vm-muted">No service records have been added for this vehicle.</p>'}
-       </div>
-       <div class="vm-card">
-        <h3 style="margin-top:0">Reported problems</h3>
-        ${defects.length?defects.map(d=>`<div class="vm-record"><div><b>${esc(d.priority)} priority</b> <span class="vm-tag ${d.priority==='Critical'?'red':''}">${esc(d.status)}</span></div><div class="vm-muted">${esc(new Date(d.reportedAt).toLocaleString('en-GB'))} · ${esc(d.reportedBy)}</div><p>${esc(d.description)}</p>${d.status!=='Closed'?`<div class="vm-actions">${d.status==='Open'?`<button class="secondary" onclick="window.vmSetDefect('${esc(d.id)}','In Progress')">Start repair</button>`:''}${d.status==='In Progress'?`<button class="secondary" onclick="window.vmSetDefect('${esc(d.id)}','Awaiting Check')">Repair completed</button>`:''}${d.status==='Awaiting Check'?`<button onclick="window.vmSetDefect('${esc(d.id)}','Closed')">Check & close</button>`:''}</div>`:''}</div>`).join(''):'<p class="vm-muted">No problems reported for this vehicle.</p>'}
-       </div>
-      `:''}`;
-   }catch(err){
-     console.error('Simple Vehicle Maintenance render failed',err);
-     host.innerHTML=`<div class="card"><h2>Vehicle Maintenance</h2><p>${esc(err.message||err)}</p><button onclick="window.renderVehicleMaintenance()">Try again</button></div>`;
-   }
+     const vehicleCards=vehicles.map(v=>`<button class="vm-vehicle ${String(v.id)===String(window._vmSelectedId)?'active':''}" onclick="window.vmSelectVehicle('${safe(v.id)}')"><span class="vm-vehicle-thumb">${(v.photo||v.photoUrl||v.image)?`<img src="${safe(v.photo||v.photoUrl||v.image)}" alt="" onerror="this.style.display='none'">`:'🚐'}</span><span class="vm-vehicle-meta"><b>${safe(v.name||'Unnamed vehicle')}</b><small>${safe(v.registration||v.asset||'Registration not recorded')}</small></span><span class="vm-vehicle-arrow">›</span></button>`).join('');
+     const photo=selected&&(selected.photo||selected.photoUrl||selected.image);
+     const tab=state.tab||'profile';
+     const profile=`<div class="vm-info-grid">
+       <section class="vm-info-card"><h3>🚐 Vehicle details</h3><div class="vm-info-rows">${infoRows([['Vehicle name',selected.name],['Registration',selected.registration||selected.asset],['Make',selected.make],['Model',selected.model],['Year',selected.year],['Colour',selected.colour],['Vehicle type',selected.type],['Fuel type',selected.fuelType],['Mileage',selected.mileage]])}</div></section>
+       <section class="vm-info-card"><h3>📋 Fleet status</h3><div class="vm-info-rows">${infoRows([['Status',selected.status],['Availability',selected.availability],['Hire status',selected.hireStatus],['Notes',selected.notes]])}${selected.maintenanceHold?'<div class="vm-warning-inline">⚠ Vehicle currently held out of service due to a critical defect.</div>':''}</div></section>
+     </div><div class="vm-form-actions"><button class="secondary" onclick="editVan('${safe(selected.id)}')">Edit Vehicle Details</button></div>`;
+     const maintenance=`<div class="vm-tab-intro"><div><h3>Maintenance &amp; service history</h3><p>Record planned work, completed servicing and repairs for this vehicle.</p></div><button onclick="window.vmShowForm('service')">＋ Add service record</button></div>
+       <div class="vm-form-panel" id="vmServiceForm"><h4>＋ Add service / work record</h4><form onsubmit="window.vmAddService(event)"><div class="vm-form-grid">
+       <label>Work type<select name="type"><option>Routine service</option><option>Repair</option><option>Tyres</option><option>Brakes</option><option>Inspection</option><option>Other</option></select></label>
+       <label>Status<select name="status"><option value="Planned">To be done</option><option value="Completed">Completed</option></select></label>
+       <label>Date<input type="date" name="date" value="${today()}" required></label><label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label>
+       <label>Garage / mechanic<input name="provider" placeholder="Optional"></label><label>Cost (£)<input type="number" min="0" step="0.01" name="cost" placeholder="Optional"></label></div>
+       <label class="vm-full-label">Work details<textarea name="description" required placeholder="What needs doing, or what work was completed?"></textarea></label>
+       <div class="vm-form-actions"><button type="button" class="secondary" onclick="window.vmShowForm('')">Cancel</button><button type="submit">Save service record</button></div></form></div>
+       <div class="vm-record-list">${services.length?services.map(r=>`<article class="vm-record"><div class="vm-record-head"><b>${safe(r.type)} · ${safe(r.date)}</b><span class="vm-tag ${r.status==='Completed'?'':'amber'}">${safe(r.status)}</span></div><p>${safe(r.description)}</p><div class="vm-muted">${r.mileage?'Mileage: '+safe(r.mileage)+' · ':''}${r.provider?'Garage: '+safe(r.provider)+' · ':''}${r.cost?'Cost: £'+Number(r.cost).toFixed(2):''}</div></article>`).join(''):'<div class="vm-empty">No service records have been added for this vehicle yet.</div>'}</div>`;
+     const problems=`${critical?'<div class="vm-critical-banner">⚠ Critical defect recorded. Do not use this vehicle until it has been checked and cleared.</div>':''}
+       <div class="vm-tab-intro"><div><h3>Reported problems</h3><p>Log damage and faults, then follow each one through to closure.</p></div><button class="danger" onclick="window.vmShowForm('defect')">＋ Report a problem</button></div>
+       <div class="vm-form-panel" id="vmDefectForm"><h4>⚠ Report damage / problem</h4><form onsubmit="window.vmAddDefect(event)"><div class="vm-form-grid"><label>Priority<select name="priority"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></label><label>Mileage<input type="number" min="0" name="mileage" placeholder="Optional"></label></div><label class="vm-full-label">Problem<textarea name="description" required placeholder="Describe the fault or damage"></textarea></label><div class="vm-form-actions"><button type="button" class="secondary" onclick="window.vmShowForm('')">Cancel</button><button type="submit" class="danger">Submit problem</button></div></form></div>
+       <div class="vm-record-list">${defects.length?defects.map(d=>`<article class="vm-record"><div class="vm-record-head"><b>${safe(d.priority)} priority</b><span class="vm-tag ${d.priority==='Critical'?'red':''}">${safe(d.status)}</span></div><div class="vm-muted">${safe(d.reportedAt?new Date(d.reportedAt).toLocaleString('en-GB'):'')} · ${safe(d.reportedBy||'')}</div><p>${safe(d.description)}</p>${d.status!=='Closed'?`<div class="vm-actions">${d.status==='Open'?`<button class="secondary" onclick="window.vmSetDefect('${safe(d.id)}','In Progress')">Start repair</button>`:''}${d.status==='In Progress'?`<button class="secondary" onclick="window.vmSetDefect('${safe(d.id)}','Awaiting Check')">Repair completed</button>`:''}${d.status==='Awaiting Check'?`<button onclick="window.vmSetDefect('${safe(d.id)}','Closed')">Check &amp; close</button>`:''}</div>`:''}</article>`).join(''):'<div class="vm-empty">No problems have been reported for this vehicle.</div>'}</div>`;
+     host.innerHTML=`<style>
+       #vehicleMaintenance .vm-shell{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px}
+       #vehicleMaintenance .vm-panel{background:var(--regency-panel,var(--card));border:1px solid var(--regency-border,var(--line));border-radius:14px;overflow:hidden;min-width:0}
+       #vehicleMaintenance .vm-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:0 0 14px}
+       #vehicleMaintenance .vm-heading h2{margin:0;font-size:23px} #vehicleMaintenance .vm-heading p{margin:5px 0 0;color:var(--regency-muted,var(--muted));font-size:13px}
+       #vehicleMaintenance .vm-side-head{padding:14px 15px;border-bottom:1px solid var(--regency-border,var(--line));font-weight:750;display:flex;justify-content:space-between}
+       #vehicleMaintenance .vm-vehicle-list{display:flex;flex-direction:column;padding:8px;gap:6px}
+       #vehicleMaintenance .vm-vehicle{display:flex;align-items:center;gap:10px;text-align:left;width:100%;padding:9px!important;border:1px solid transparent!important;border-radius:10px!important;background:transparent!important;color:var(--regency-text,var(--text))!important}
+       #vehicleMaintenance .vm-vehicle.active{background:rgba(14,132,72,.12)!important;border-color:rgba(16,185,100,.4)!important}
+       #vehicleMaintenance .vm-vehicle-thumb{width:48px;height:42px;flex:0 0 48px;border-radius:8px;background:var(--regency-panel-2,var(--card));display:grid;place-items:center;overflow:hidden;font-size:22px}
+       #vehicleMaintenance .vm-vehicle-thumb img{width:100%;height:100%;object-fit:cover}
+       #vehicleMaintenance .vm-vehicle-meta{min-width:0;flex:1}.vm-vehicle-meta b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.vm-vehicle-meta small{display:block;color:var(--regency-muted,var(--muted));margin-top:3px;font-size:11px}
+       #vehicleMaintenance .vm-vehicle-arrow{font-size:20px;color:var(--regency-muted,var(--muted))}
+       #vehicleMaintenance .vm-main{min-width:0}.vm-profile-top{display:flex;align-items:stretch;gap:0;min-height:174px;border-bottom:1px solid var(--regency-border,var(--line))}
+       #vehicleMaintenance .vm-hero-photo{width:34%;min-width:180px;max-width:300px;min-height:174px;background:linear-gradient(135deg,#183b2a,#0b1710);display:grid;place-items:center;overflow:hidden;color:#8fb49b;font-size:56px}
+       #vehicleMaintenance .vm-hero-photo img{width:100%;height:100%;min-height:174px;max-height:220px;object-fit:cover}
+       #vehicleMaintenance .vm-profile-title{padding:20px;display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1}
+       #vehicleMaintenance .vm-profile-title h2{margin:0;font-size:clamp(21px,2.5vw,29px)}#vehicleMaintenance .vm-profile-title p{margin:6px 0 0;color:var(--regency-muted,var(--muted))}
+       #vehicleMaintenance .vm-profile-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}#vehicleMaintenance .vm-profile-actions button{width:auto!important}
+       #vehicleMaintenance .vm-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;padding:13px 16px;border-bottom:1px solid var(--regency-border,var(--line))}
+       #vehicleMaintenance .vm-summary-item{padding:10px 12px;border:1px solid var(--regency-border,var(--line));border-radius:10px;min-width:0}
+       #vehicleMaintenance .vm-summary-item small{display:block;color:var(--regency-muted,var(--muted));font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}#vehicleMaintenance .vm-summary-item b{font-size:20px}
+       #vehicleMaintenance .vm-tabs{display:flex;gap:3px;padding:0 12px;border-bottom:1px solid var(--regency-border,var(--line));overflow-x:auto}
+       #vehicleMaintenance .vm-tab{width:auto!important;min-width:max-content!important;border:0!important;border-radius:0!important;background:transparent!important;color:var(--regency-muted,var(--muted))!important;padding:13px 14px!important;border-bottom:3px solid transparent!important;box-shadow:none!important}
+       #vehicleMaintenance .vm-tab.active{color:var(--regency-text,var(--text))!important;border-bottom-color:#0bb86a!important;background:rgba(11,184,106,.07)!important}
+       #vehicleMaintenance .vm-content{padding:17px}#vehicleMaintenance .vm-info-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+       #vehicleMaintenance .vm-info-card{border:1px solid var(--regency-border,var(--line));border-radius:12px;overflow:hidden;min-width:0}
+       #vehicleMaintenance .vm-info-card h3{font-size:15px;margin:0;padding:12px 14px;background:rgba(14,120,69,.08);border-bottom:1px solid var(--regency-border,var(--line))}
+       #vehicleMaintenance .vm-info-rows{padding:6px 14px}.vm-info-row{display:grid;grid-template-columns:minmax(95px,34%) minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--regency-border,var(--line));font-size:13px}.vm-info-row:last-child{border-bottom:0}.vm-info-row span{color:var(--regency-muted,var(--muted))}
+       #vehicleMaintenance .vm-tab-intro{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}#vehicleMaintenance .vm-tab-intro h3{margin:0;font-size:17px}#vehicleMaintenance .vm-tab-intro p{margin:4px 0 0;color:var(--regency-muted,var(--muted));font-size:13px}
+       #vehicleMaintenance .vm-form-panel{display:none;background:var(--regency-panel-2,var(--card));border:1px solid var(--regency-border,var(--line));border-radius:12px;padding:14px;margin-bottom:14px}#vehicleMaintenance .vm-form-panel.open{display:block}#vehicleMaintenance .vm-form-panel h4{margin:0 0 12px}
+       #vehicleMaintenance .vm-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}#vehicleMaintenance label{display:block;min-width:0;font-size:13px;color:var(--regency-text,var(--text))}
+       #vehicleMaintenance input,#vehicleMaintenance select,#vehicleMaintenance textarea{display:block;width:100%;box-sizing:border-box;margin-top:5px;background:var(--regency-bg,var(--background));color:var(--regency-text,var(--text));border:1px solid var(--regency-border,var(--line));border-radius:9px;padding:10px;font:inherit}
+       #vehicleMaintenance textarea{min-height:82px;resize:vertical}#vehicleMaintenance .vm-full-label{display:block;margin-top:11px}
+       #vehicleMaintenance .vm-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}#vehicleMaintenance .vm-form-actions button,#vehicleMaintenance .vm-tab-intro button{width:auto!important}
+       #vehicleMaintenance .vm-record{border:1px solid var(--regency-border,var(--line));border-radius:11px;padding:13px;margin:9px 0;background:var(--regency-panel-2,var(--card))}
+       #vehicleMaintenance .vm-record-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.vm-record p{margin:9px 0}.vm-muted{font-size:12px;color:var(--regency-muted,var(--muted))}
+       #vehicleMaintenance .vm-tag{display:inline-flex;border-radius:20px;padding:4px 9px;background:rgba(14,132,72,.16);border:1px solid rgba(16,185,100,.3);font-size:11px;font-weight:750;white-space:nowrap}
+       #vehicleMaintenance .vm-tag.amber{background:rgba(174,122,18,.15);border-color:rgba(211,157,42,.4)}#vehicleMaintenance .vm-tag.red{background:rgba(170,45,45,.18);border-color:rgba(220,75,75,.45)}
+       #vehicleMaintenance .vm-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}#vehicleMaintenance .vm-actions button{width:auto!important}
+       #vehicleMaintenance .vm-empty{padding:24px 14px;text-align:center;color:var(--regency-muted,var(--muted));border:1px dashed var(--regency-border,var(--line));border-radius:11px}
+       #vehicleMaintenance .vm-critical-banner,#vehicleMaintenance .vm-warning-inline{padding:12px 14px;margin:0 0 13px;border:1px solid rgba(220,75,75,.45);border-radius:10px;background:rgba(120,25,25,.13);color:#e9a4a4;font-weight:700;font-size:13px}
+       @media(max-width:850px){#vehicleMaintenance .vm-shell{grid-template-columns:1fr}#vehicleMaintenance .vm-vehicle-list{display:flex;flex-direction:row;overflow-x:auto;padding:9px;scroll-snap-type:x proximity}#vehicleMaintenance .vm-vehicle{min-width:205px;max-width:245px;scroll-snap-align:start}#vehicleMaintenance .vm-profile-top{min-height:150px}#vehicleMaintenance .vm-hero-photo{min-height:150px}#vehicleMaintenance .vm-hero-photo img{min-height:150px}}
+       @media(max-width:560px){#vehicleMaintenance .vm-heading{flex-direction:column}#vehicleMaintenance .vm-profile-top{display:block}#vehicleMaintenance .vm-hero-photo{width:100%;max-width:none;height:155px;min-height:155px}#vehicleMaintenance .vm-hero-photo img{height:155px;min-height:155px}#vehicleMaintenance .vm-profile-title{padding:15px}#vehicleMaintenance .vm-summary{grid-template-columns:repeat(3,minmax(0,1fr));padding:10px;gap:6px}#vehicleMaintenance .vm-summary-item{padding:8px}#vehicleMaintenance .vm-summary-item b{font-size:17px}#vehicleMaintenance .vm-tabs{padding:0 6px}#vehicleMaintenance .vm-tab{padding:12px 10px!important;font-size:12px!important}#vehicleMaintenance .vm-content{padding:11px}#vehicleMaintenance .vm-info-grid,#vehicleMaintenance .vm-form-grid{grid-template-columns:1fr}#vehicleMaintenance .vm-tab-intro{align-items:flex-start;flex-direction:column}#vehicleMaintenance .vm-tab-intro button{width:100%!important}#vehicleMaintenance .vm-info-row{grid-template-columns:38% minmax(0,1fr)}}
+     </style>
+     <div class="vm-heading"><div><h2>🔧 Vehicle Maintenance</h2><p>Fleet vehicle profiles, service history and reported problems.</p></div></div>
+     ${vehicles.length?`<div class="vm-shell"><aside class="vm-panel"><div class="vm-side-head"><span>Fleet vehicles</span><span class="vm-muted">${vehicles.length}</span></div><div class="vm-vehicle-list">${vehicleCards}</div></aside>
+       <section class="vm-panel vm-main"><div class="vm-profile-top"><div class="vm-hero-photo">${photo?`<img src="${safe(photo)}" alt="${safe(selected.name||'Vehicle')}" onerror="this.parentElement.innerHTML='🚐'">`:'🚐'}</div><div class="vm-profile-title"><h2>${safe(selected.name||'Unnamed vehicle')}</h2><p>${safe(selected.registration||selected.asset||'Registration not recorded')}</p><div class="vm-profile-actions"><button class="secondary" onclick="editVan('${safe(selected.id)}')">Edit Profile</button></div></div></div>
+       <div class="vm-summary"><div class="vm-summary-item"><small>Service records</small><b>${services.length}</b></div><div class="vm-summary-item"><small>Open problems</small><b>${open.length}</b></div><div class="vm-summary-item"><small>Vehicle status</small><b style="font-size:14px">${safe(selected.status||selected.availability||'On fleet')}</b></div></div>
+       <nav class="vm-tabs">${[['profile','Profile'],['maintenance','Maintenance'],['problems','Problems']].map(([key,label])=>`<button class="vm-tab ${tab===key?'active':''}" onclick="window.vmSetTab('${key}')">${label}</button>`).join('')}</nav>
+       <div class="vm-content">${tab==='profile'?profile:tab==='maintenance'?maintenance:problems}</div></section></div>`:'<div class="vm-panel vm-empty">No fleet vehicles found. Add vehicles under Equipment &amp; Vehicles first.</div>'}`;
+   }catch(err){console.error('Vehicle Profiles render failed',err);host.innerHTML=`<div class="card"><h2>Vehicle Maintenance</h2><p>${safe(err.message||err)}</p><button onclick="window.renderVehicleMaintenance()">Try again</button></div>`;}
  }
  window.renderVehicleMaintenance=render;
- window.vmSelectVehicle=function(id){window._vmSelectedId=id;render()};
+ window.vmSelectVehicle=function(id){window._vmSelectedId=id;state.tab='profile';render()};
+ window.vmSetTab=function(tab){if(!['profile','maintenance','problems'].includes(tab))return;state.tab=tab;render()};
+ window.vmShowForm=function(which){const a=document.getElementById('vmServiceForm'),b=document.getElementById('vmDefectForm');a?.classList.toggle('open',which==='service');b?.classList.toggle('open',which==='defect')};
  window.vmAddService=function(e){
    e.preventDefault();const s=store(),v=s.vans.find(x=>String(x.id)===String(window._vmSelectedId));if(!v)return;
    const f=e.target,fd=new FormData(f);
    s.vehicleMaintenance.unshift({id:id(),vehicleId:v.id,type:String(fd.get('type')||'Other'),status:String(fd.get('status')||'Planned'),date:String(fd.get('date')||today()),mileage:String(fd.get('mileage')||''),provider:String(fd.get('provider')||''),cost:Number(fd.get('cost')||0),description:String(fd.get('description')||''),createdAt:new Date().toISOString(),createdBy:userName()});
-   saveData();render();
+   saveData();state.tab='maintenance';render();
  };
  window.vmAddDefect=function(e){
    e.preventDefault();const s=store(),v=s.vans.find(x=>String(x.id)===String(window._vmSelectedId));if(!v)return;
@@ -1904,19 +1910,16 @@ window.exportReport=function(key){
    if(priority==='Critical'){if(!v.maintenanceHold)v.maintenancePreviousStatus={status:v.status||'',availability:v.availability||'',hireStatus:v.hireStatus||''};v.maintenanceHold=true;v.maintenanceHoldReason=d.description;v.status='Unavailable';v.availability='Unavailable';v.hireStatus='Unavailable';}
    saveData();
    try{if(typeof addNotification==='function')addNotification(priority==='Critical'?'warning':'info','Vehicle problem reported',vehicleName(v)+': '+d.description,'vehicle-defect-'+d.id)}catch(_){}
-   render();
+   state.tab='problems';render();
  };
  window.vmSetDefect=function(defectId,status){
    const s=store(),d=s.vehicleDefects.find(x=>String(x.id)===String(defectId));if(!d)return;
    d.status=status;d.updatedAt=new Date().toISOString();d.updatedBy=userName();
    const v=s.vans.find(x=>String(x.id)===String(d.vehicleId));
    if(v){const stillCritical=s.vehicleDefects.some(x=>String(x.vehicleId)===String(v.id)&&x.priority==='Critical'&&x.status!=='Closed');v.maintenanceHold=stillCritical;if(!stillCritical){v.maintenanceHoldReason='';const prev=v.maintenancePreviousStatus||{};v.status=prev.status||'Available';v.availability=prev.availability||'Available';v.hireStatus=prev.hireStatus||'Available';delete v.maintenancePreviousStatus;}}
-   saveData();render();
+   saveData();state.tab='problems';render();
  };
 })();
-
-
-
 function vehicleCriticalDefect(vehicleId){
  const defects=Array.isArray(data.vehicleDefects)?data.vehicleDefects:[];
  return defects.find(d=>String(d.vehicleId)===String(vehicleId)&&d.priority==='Critical'&&d.status!=='Closed')||null;
