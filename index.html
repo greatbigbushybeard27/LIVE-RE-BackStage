@@ -54,7 +54,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" href="icon.svg">
-<title>BV1.7.7 · Regency Events Backstage</title>
+<title>BV1.7.8 · Regency Events Backstage</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f3f4f6;color:#111827}
@@ -1011,7 +1011,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.7.7" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.7</div>
+<div id="backstage-app-version" data-release="BV1.7.8" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.7.8</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -5532,6 +5532,42 @@ window.chooseCustomerContactBV172=function(kind,index){const x=window._custPicke
  const oldChoose=window.chooseCustomerContactBV172;window.chooseCustomerContactBV172=function(kind,index){oldChoose(kind,index);window.refreshBookingLocationsBV177(kind)};
 
  const style=document.createElement('style');style.textContent='.cust-picker-card,.cust-picker-org,.cust-card-person,.cust-picker-individual{background:#1b2921!important;color:#e5ece7!important;border:1px solid #34483b!important;box-shadow:none!important}.cust-picker-card{border-radius:12px!important;margin:7px 0!important}.cust-picker-org,.cust-card-person,.cust-picker-individual{border-radius:9px!important}.cust-picker-card small,.cust-card-person small,.cust-picker-card-copy small{color:#a9b9ae!important}.cust-card-arrow{color:#a9b9ae!important}.cust-card-empty,.cust-picker-empty{color:#a9b9ae!important}.cust-card-person:active,.cust-picker-org:active{background:#26372c!important}';document.head.appendChild(style);
+})();
+</script>
+
+
+<script>
+/* BV1.7.8: preserve the booking form while the saved-customer picker is open. */
+(function(){
+ const body=()=>document.getElementById('modalBody');
+ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const originalPicker=window.openCustomerContactPickerBV172;
+ let savedForm=null, activeKind='';
+ function capture(){const host=body();if(!host)return null;const values={};host.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>{if(el.type==='file')return;values[el.id]={value:el.value,checked:!!el.checked}});return {html:host.innerHTML,values};}
+ function restore(){const host=body();if(!host||!savedForm)return;host.innerHTML=savedForm.html;Object.entries(savedForm.values).forEach(([id,v])=>{const el=document.getElementById(id);if(!el)return;el.value=v.value;if(el.type==='checkbox'||el.type==='radio')el.checked=v.checked});}
+ function fill(kind,x){const set=(suffix,val)=>{const el=document.getElementById(kind+'-'+suffix);if(el)el.value=val??''};
+   const isOrg=x.type==='organisation'||x.type==='contact';
+   set('customer-select',x.customerId||'');set('customer-type',isOrg?'organisation':'individual');
+   set('organisation-name',isOrg?(x.organisation||x.company||(x.type==='organisation'?x.name:'')):'');
+   set('contact-name',x.type==='organisation'?'':(x.name||''));set('contact-email',x.type==='organisation'?'':(x.email||''));set('contact-phone',x.type==='organisation'?'':(x.phone||''));
+   if(window.toggleBookingCustomerTypeBV175)window.toggleBookingCustomerTypeBV175(kind);
+   const badge=document.getElementById(kind+'-customer-selected');if(badge)badge.textContent=x.type==='organisation'?x.name+' selected · choose a contact or enter a new one':(x.name+' · '+(x.organisation||'Individual'));
+   if(window.refreshBookingLocationsBV177)window.refreshBookingLocationsBV177(kind);
+ }
+ window.cancelBookingContactPickerBV178=function(){restore();savedForm=null;};
+ window.openCustomerContactPickerBV172=function(kind){activeKind=kind;savedForm=capture();if(typeof originalPicker==='function')originalPicker(kind);const cancel=body()?.querySelector('button[onclick=\"closeModal()\"]');if(cancel)cancel.onclick=window.cancelBookingContactPickerBV178;};
+ window.chooseCustomerContactBV172=function(kind,index){
+   const x=window._custPickerResultsBV172?.[index];if(!x)return;
+   if(x.type==='organisation'){
+     activeKind=kind;const contacts=Array.isArray(x.contacts)?x.contacts:[];window._bv178PendingOrg=x;
+     const host=body();if(!host)return;
+     host.innerHTML=`<div class="section-head"><h2 style="margin:0">${esc(x.name)}</h2><button type="button" class="secondary" onclick="cancelBookingContactPickerBV178()">Cancel</button></div><p class="small muted">Choose a saved contact for this organisation, or enter a new contact.</p><div class="cust-picker-results">${contacts.map((c,i)=>`<button type="button" class="cust-card-person" onclick="chooseCustomerContactBV178(${i})"><span class="cust-card-mini-avatar">${esc((c.name||'•').slice(0,2))}</span><span><b>${esc(c.name)}</b><small>${esc(c.role||'Contact')}${c.phone?' · '+esc(c.phone):''}</small></span><span class="cust-card-arrow">›</span></button>`).join('')||'<div class="cust-picker-empty">No saved contacts yet.</div>'}</div><button type="button" class="secondary" style="width:100%;margin-top:12px" onclick="useOrganisationNewContactBV178()">Use organisation and enter a new contact</button>`;
+     window._bv178PendingContacts=contacts;return;
+   }
+   restore();fill(kind,x);savedForm=null;
+ };
+ window.chooseCustomerContactBV178=function(index){const x=window._bv178PendingContacts?.[index];if(!x)return;restore();fill(activeKind,{...x,type:'contact',organisation:window._bv178PendingOrg?.name||x.organisation,company:window._bv178PendingOrg?.name||x.company,customerId:window._bv178PendingOrg?.customerId||x.customerId});savedForm=null;};
+ window.useOrganisationNewContactBV178=function(){const x=window._bv178PendingOrg;if(!x)return;restore();fill(activeKind,x);const name=document.getElementById(activeKind+'-contact-name');if(name){name.value='';name.focus()}const badge=document.getElementById(activeKind+'-customer-selected');if(badge)badge.textContent=x.name+' · enter a new contact';savedForm=null;};
 })();
 </script>
 
