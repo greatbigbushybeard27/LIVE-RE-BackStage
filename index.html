@@ -1003,6 +1003,22 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  .event-redesign-card .event-info-rows button .small{display:none}
 }
 </style>
+
+<style id="bv181-card-fixes">
+.event-redesign-card .event-card-heading .small{overflow-wrap:anywhere}
+.portaloo-redesign-card .portaloo-title{font-size:1.35rem;line-height:1.2;font-weight:800}
+.portaloo-redesign-card .portaloo-sub{margin-top:5px;color:var(--muted,#a8b8af)}
+.portaloo-redesign-card .portaloo-redesign-units{margin:0}
+.portaloo-redesign-card .portaloo-redesign-units .portaloo-unit{background:#172b22;border:1px solid #294638;border-radius:13px;padding:10px}
+.portaloo-redesign-card .portaloo-redesign-units .portaloo-unit-photo{max-height:145px;object-fit:contain}
+.portaloo-redesign-card .portaloo-card-actions>button{min-height:54px;padding:10px 8px;white-space:normal}
+.portaloo-redesign-card .portaloo-date-panel b{font-variant-numeric:tabular-nums}
+@media(max-width:390px){
+ .portaloo-redesign-card .portaloo-info-rows{font-size:13px}
+ .portaloo-redesign-card .portaloo-info-rows button .small{display:none}
+ .portaloo-redesign-card .portaloo-date-panel .small{font-size:10px}
+}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1026,7 +1042,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.8.0" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.8.0</div>
+<div id="backstage-app-version" data-release="BV1.8.1" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.8.1</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -2907,7 +2923,7 @@ function renderEvents(){
     return `<div class="job-summary event-redesign-card ${j.status==='Closed'?'job-complete':''} ${mode==='list'?'v62-job-list':''}" style="padding:14px;display:flex;flex-direction:column;gap:10px">
       ${j.photo?`<div class="v62-job-photo" style="margin:0">${photoHtml(j.photo,'v62-job-photo-img')}</div>`:''}
       <div class="event-card-heading" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-        <div style="min-width:0;flex:1"><div class="job-summary-title" style="font-size:1.35rem;line-height:1.2">${esc(String(j.name||'').replace(/\s*\(Copy\)$/i,''))}</div><div class="small muted" style="margin-top:5px">▦ Event Job${categoryText?' · '+esc(categoryText):''}</div></div>
+        <div style="min-width:0;flex:1"><div class="job-summary-title" style="font-size:1.35rem;line-height:1.2">${esc(String(j.name||'').replace(/\s*\(Copy\)$/i,''))}</div><div class="small muted" style="margin-top:5px">▦ Event Job${categoryText?' · '+categoryText:''}</div></div>
         ${eventStatusBadge(j.status)}
       </div>
       <div class="event-date-panel" style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;padding:10px 6px;border:1px solid #287b59;border-radius:13px;background:linear-gradient(110deg,#10291e,#153b2a)">
@@ -3184,11 +3200,48 @@ function portalooServiceDueText(j){
 }
 function portalooServiceDueClass(j){const due=portalooServiceDueDate(j);if(!due)return '';const d=new Date(due+'T00:00:00');const today=new Date();today.setHours(0,0,0,0);return d<today?' service-overdue':d.getTime()===today.getTime()?' service-today':'';}
 function portalooCard(j){
- return `<div class="portaloo-card ${j.status==='Closed'?'job-complete':''}">
-  <div class="row"><div><div class="portaloo-title">${esc(j.name)}</div><div class="portaloo-sub">${portalooDateText(j)} • ${esc(j.status)}</div></div>${portalooStatusBadge(j.status)}</div>
-  <div class="portaloo-units">${Object.entries(j.stockAllocations||{}).length?Object.entries(j.stockAllocations||{}).map(([stockId,q])=>{const x=data.portalooEquipment.find(i=>i.id===stockId);const itemPhoto=x?.photo?photoHtml(x.photo,'portaloo-unit-photo'):`<div class="portaloo-unit-photo-fallback">${bsPortalooLineIcon()}</div>`;return `<div class="portaloo-unit">${itemPhoto}<b>${Number(q)||0}</b><span>${esc(x?.name||'Portaloo stock')}</span></div>`}).join(''):`<div class="portaloo-unit" style="grid-column:1/-1"><div class="portaloo-unit-photo-fallback">${bsPortalooLineIcon()}</div><b>0</b><span>No stock allocated</span></div>`}</div>
-  <div class="muted">📍 ${esc(j.what3words||j.location||'No location')}<br>👤 ${esc(portalooCrewText(j))}<br>🚐 ${esc((j.vehicleIds||[]).map(id=>vehicleSafetyBlocked(id)?'⚠ '+vanName(id)+' (OUT OF SERVICE)':vanName(id)).join(', ')||'No vehicles assigned')}<br>🏢 ${esc(j.customer?.company||j.customer?.name||'No customer')}</div><div class="portaloo-service-due${portalooServiceDueClass(j)}">${portalooServiceDueText(j)}</div>${portalooStatusHtml(j)}${(j.what3words||j.location)?`<div class="actions" style="margin-top:10px"><button class="maps-btn" onclick="openWhat3WordsAppForValue('${esc(j.what3words||j.location)}')">📍 Navigate in What3words</button></div>`:''}
-  <div class="actions"><button class="green" onclick="viewPortalooJob('${j.id}')">Open Job</button>${j.status==='Closed'?`<button class="secondary" onclick="reopenPortalooJob('${j.id}')">Reopen hire</button>`:`<button class="danger" onclick="closePortalooJob('${j.id}')">Mark returned / Close hire</button>`}</div>
+ const stockRows=Object.entries(j.stockAllocations||{}).map(([stockId,q])=>({item:data.portalooEquipment.find(i=>i.id===stockId),qty:Number(q)||0})).filter(x=>x.qty>0);
+ const units=stockRows.length?stockRows.map(({item,qty})=>{
+   const image=item?.photo?photoHtml(item.photo,'portaloo-unit-photo'):`<div class="portaloo-unit-photo-fallback">${bsPortalooLineIcon()}</div>`;
+   return `<div class="portaloo-unit" style="min-width:0">${image}<b>${qty}</b><span>${esc(item?.name||'Portaloo stock')}</span></div>`;
+ }).join(''):`<div class="portaloo-unit" style="grid-column:1/-1"><div class="portaloo-unit-photo-fallback">${bsPortalooLineIcon()}</div><b>${portalooUnitTotal(j)}</b><span>No stock detail recorded</span></div>`;
+ const customerName=j.customer?.company||j.customer?.name||'No customer';
+ const contact=j.customer?.company&&j.customer?.name?`<span class="small muted" style="display:block">${esc(j.customer.name)}</span>`:'';
+ const vehicles=(j.vehicleIds||[]).map(id=>vehicleSafetyBlocked(id)?'⚠ '+vanName(id)+' (OUT OF SERVICE)':vanName(id)).join(', ')||'No vehicles assigned';
+ const crew=portalooCrewText(j)||'Unassigned';
+ const location=j.what3words||j.location||'No location';
+ const dateStart=backstageDateUK(j.startDate)||'Not set';
+ const dateEnd=j.rolling?'Rolling':(backstageDateUK(j.endDate)||'Ongoing');
+ const nav=j.what3words||j.location
+   ?`<button class="maps-btn" type="button" onclick="openWhat3WordsAppForValue('${esc(j.what3words||j.location)}')">📍 Navigate</button>`
+   :`<button class="secondary" type="button" disabled>📍 No location</button>`;
+ const closeAction=j.status==='Closed'
+   ?`<button class="secondary" type="button" onclick="reopenPortalooJob('${j.id}')">↻ Reopen hire</button>`
+   :`<button class="danger" type="button" onclick="closePortalooJob('${j.id}')">✓ Close hire</button>`;
+ return `<div class="portaloo-card portaloo-redesign-card ${j.status==='Closed'?'job-complete':''}" style="padding:14px;display:flex;flex-direction:column;gap:10px">
+  <div class="portaloo-card-heading" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+   <div style="min-width:0;flex:1"><div class="portaloo-title">${esc(j.name)}</div><div class="portaloo-sub">Portaloo Hire · ${portalooUnitTotal(j)} unit${portalooUnitTotal(j)===1?'':'s'}</div></div>
+   ${portalooStatusBadge(j.status)}
+  </div>
+  <div class="portaloo-units portaloo-redesign-units">${units}</div>
+  <div class="portaloo-date-panel" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;padding:10px 6px;border:1px solid #287b59;border-radius:13px;background:linear-gradient(110deg,#10291e,#153b2a)">
+   <div style="padding:2px 6px;min-width:0"><div class="small" style="font-weight:800;color:#9be0bf">▦ HIRE START</div><b style="display:block;font-size:clamp(14px,3.8vw,19px);line-height:1.3;margin-top:5px">${esc(dateStart)}</b></div>
+   <div style="padding:2px 6px;min-width:0;border-left:1px solid #496c5a"><div class="small" style="font-weight:800;color:#9be0bf">⚑ HIRE END</div><b style="display:block;font-size:clamp(14px,3.8vw,19px);line-height:1.3;margin-top:5px">${esc(dateEnd)}</b></div>
+  </div>
+  <div class="portaloo-info-rows" style="display:flex;flex-direction:column">
+   <div style="display:grid;grid-template-columns:26px minmax(70px,.55fr) minmax(0,1.45fr);gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid #294638"><span>♙</span><span class="small muted">Customer</span><b style="overflow-wrap:anywhere">${esc(customerName)}${contact}</b></div>
+   <div style="display:grid;grid-template-columns:26px minmax(70px,.55fr) minmax(0,1.45fr);gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid #294638"><span>🚐</span><span class="small muted">Vehicle</span><b style="overflow-wrap:anywhere">${esc(vehicles)}</b></div>
+   <div style="display:grid;grid-template-columns:26px minmax(70px,.55fr) minmax(0,1.45fr);gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid #294638"><span>📍</span><span class="small muted">Location</span><div style="display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0"><b style="overflow-wrap:anywhere;font-size:.92em">${esc(location)}</b>${j.what3words||j.location?`<button class="secondary" type="button" style="padding:7px 9px;flex:0 0 auto" onclick="openWhat3WordsAppForValue('${esc(j.what3words||j.location)}')">↗ <span class="small">What3words</span></button>`:''}</div></div>
+   <div style="display:grid;grid-template-columns:26px minmax(70px,.55fr) minmax(0,1.45fr);gap:8px;align-items:center;padding:8px 2px"><span>♧</span><span class="small muted">Crew</span><b style="overflow-wrap:anywhere">${esc(crew)}</b></div>
+  </div>
+  <div class="portaloo-service-due${portalooServiceDueClass(j)}" style="margin:0;padding:12px;border-radius:13px;font-weight:700">${esc(portalooServiceDueText(j))}</div>
+  ${portalooStatusHtml(j)}
+  <div class="portaloo-card-actions" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:3px">
+   ${nav}
+   <button class="green" type="button" onclick="viewPortalooJob('${j.id}')">▣ Open Job</button>
+   <button class="secondary" type="button" onclick="editPortalooJob('${j.id}')">✎ Edit Job</button>
+   ${closeAction}
+  </div>
  </div>`;
 }
 function portalooTypes(){return ['Mondo','Maxim 3000','Tuffway']}
