@@ -1019,6 +1019,54 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  .portaloo-redesign-card .portaloo-date-panel .small{font-size:10px}
 }
 </style>
+
+<style id="bv190-smart-calendar">
+.bc-smart-calendar .calendar-view-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.bc-smart-calendar .calendar-view-tabs button{min-height:48px}
+.bc-agenda{display:flex;flex-direction:column;gap:14px;margin-top:12px}
+.bc-agenda-day{border:1px solid #294638;border-radius:15px;overflow:hidden;background:#0e1d16}
+.bc-agenda-day>header{display:flex;align-items:center;justify-content:space-between;padding:10px 13px;background:linear-gradient(100deg,#173c2b,#10291e);border-bottom:1px solid #355744}
+.bc-agenda-day>header>div{display:flex;align-items:baseline;gap:10px}
+.bc-agenda-day>header small{color:#a5c4b2;text-transform:uppercase;font-weight:800}
+.bc-agenda-day>header b{font-size:19px}
+.bc-agenda-day>header>span{color:#9ce2bc;font-size:13px;font-weight:700}
+.bc-agenda-items{display:flex;flex-direction:column;gap:8px;padding:9px}
+.bc-job-card{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:10px 9px;border:1px solid #355444;border-left:5px solid #bd6682;border-radius:12px;background:#13251c;color:#eef8f1;min-width:0}
+.bc-job-card.hire{border-left-color:#5c9bcf}
+.bc-job-card.portaloo{border-left-color:#69c79b}
+.bc-job-icon{display:flex;align-items:center;justify-content:center;flex:0 0 38px;height:38px;border-radius:10px;background:#442531;color:#f2a4bd;font-size:21px}
+.bc-job-card.hire .bc-job-icon{background:#1d3850;color:#9dcfff}
+.bc-job-card.portaloo .bc-job-icon{background:#174331;color:#a4e9c1}
+.bc-job-main{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+.bc-job-title{font-weight:800;font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.bc-job-meta,.bc-job-sub{font-size:11px;color:#b5c8bd;line-height:1.25;overflow-wrap:anywhere}
+.bc-job-status{font-size:10px;font-weight:800;padding:5px 7px;border-radius:99px;background:#18432f;color:#a9ebc5;white-space:nowrap;align-self:flex-start}
+.bc-job-status.loading{background:#60440e;color:#ffdc8b}.bc-job-status.onsite{background:#14583c;color:#9af0bd}.bc-job-status.collect{background:#26425d;color:#b8d8ff}.bc-job-status.closed{background:#333d37;color:#c5d0c9}
+.bc-job-chevron{font-size:22px;color:#9acbb0}
+.bc-job-card.compact{padding:7px}
+.bc-empty,.bc-timeline-empty{padding:18px;text-align:center;color:#9eb5a8}
+.bc-timeline-wrap{margin-top:12px}
+.bc-all-day{display:flex;flex-direction:column;gap:7px;padding:10px;border:1px solid #34513f;border-radius:12px;margin-bottom:12px;background:#102219}
+.bc-all-day>.bc-job-card{margin-top:2px}
+.bc-timeline{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px}
+.bc-time-rail{display:flex;flex-direction:column}
+.bc-time-row{height:58px;position:relative;color:#a9beb2;font-size:11px}
+.bc-time-row span{position:absolute;top:-7px;right:2px}
+.bc-time-row i{display:none}
+.bc-timeline-track{position:relative;border-left:1px solid #355444;border-top:1px solid #355444;background:repeating-linear-gradient(to bottom,transparent 0,transparent 57px,#294638 58px);border-radius:0 10px 10px 0;min-height:200px}
+.bc-timeline-block{position:absolute;top:var(--top);height:var(--height);left:5px;right:5px;display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:7px 9px;border:1px solid #b55d79;border-left:5px solid #e58aa7;border-radius:10px;background:#442531;color:#fff;overflow:hidden}
+.bc-timeline-block.hire{border-color:#5795c8;background:#1b3854}
+.bc-timeline-block.portaloo{border-color:#65bd91;background:#16432f}
+.bc-timeline-block b{font-size:12px;line-height:1.2}
+.bc-timeline-block span,.bc-timeline-block small{font-size:10px;opacity:.9}
+.bc-timeline-block em{font-size:10px;font-style:normal;font-weight:800;margin-top:auto}
+.bc-month-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.bc-smart-calendar .calendar-date{border:0;background:transparent;color:inherit;width:100%;min-height:34px}
+.bc-smart-calendar .calendar-date.selected{background:#176c49;color:#fff;border-radius:8px;font-weight:900}
+.bc-month-selected{margin-top:14px}
+.bc-month-selected h3{margin:0 0 9px;font-size:17px}
+@media(max-width:390px){.bc-job-card{gap:6px;padding:8px 6px}.bc-job-icon{flex-basis:31px;height:34px}.bc-job-title{font-size:12px}.bc-job-meta,.bc-job-sub{font-size:10px}.bc-job-status{font-size:9px;padding:4px 5px}}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1042,7 +1090,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.8.1" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.8.1</div>
+<div id="backstage-app-version" data-release="BV1.9.0" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.9.0</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -2284,54 +2332,73 @@ async function syncAllJobsToGoogle(){
 
 let calendarDate = new Date();
 calendarDate.setHours(0,0,0,0);
-let calendarView = 'week';
+let calendarView = 'agenda';
 let calendarFilter = 'all';
 function backstageDateUK(value){if(!value)return '';const raw=String(value);const m=raw.match(/^(\d{4})-(\d{2})-(\d{2})/);if(!m){const d=new Date(raw);return Number.isNaN(d.getTime())?raw:d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'2-digit'});}return `${m[3]}/${m[2]}/${m[1].slice(-2)}`;}
 function calendarDateKey(d){const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');return `${y}-${m}-${day}`;}
 function calendarParseDate(s){if(!s)return null;const p=String(s).split('-').map(Number);if(p.length!==3||!p[0]||!p[1]||!p[2])return null;return new Date(p[0],p[1]-1,p[2]);}
 function calendarWeekStart(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x;}
 function calendarAddDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function calendarFirstValue(obj,keys){for(const k of keys){const v=obj?.[k];if(v!==undefined&&v!==null&&String(v).trim()!=='')return v;}return '';}
 function calendarGetEvents(){
- const out=[];const add=(e)=>{if(e&&e.start){e.end=e.end&&e.end>=e.start?e.end:e.start;out.push(e);}};
- (data.events||[]).forEach(j=>{const start=j.startDate||j.date||j.start||j.eventDate;const end=j.endDate||j.finishDate||j.end||start;if(!start)return;add({id:j.id,name:j.name||j.title||'Event job',type:'event',status:j.status,start:String(start).slice(0,10),end:String(end||start).slice(0,10),detail:j.location||j.venue||'Event / Job'});});
- (data.portalooJobs||[]).forEach(j=>{const start=j.startDate||j.date,end=j.rolling?start:(j.endDate||j.returnDate||start);if(!start||j.status==='Closed')return;add({id:j.id,name:j.name||'Portaloo booking',type:'portaloo',status:j.status,start:String(start).slice(0,10),end:String(end||start).slice(0,10),detail:(j.quantity?j.quantity+' units · ':'')+'Portaloo Hire'});});
+ const out=[];const add=e=>{if(e&&e.start){e.end=e.end&&e.end>=e.start?e.end:e.start;out.push(e);}};
+ (data.events||[]).forEach(j=>{const start=calendarFirstValue(j,['onsiteDate','startDate','date','start','eventDate']);const end=calendarFirstValue(j,['endDate','finishDate','end'])||start;if(!start)return;add({id:j.id,name:j.name||j.title||'Event job',type:'event',status:j.status||'Booked',start:String(start).slice(0,10),end:String(end||start).slice(0,10),detail:j.location||j.venue||'Event / Job',location:j.what3words||j.location||j.venue||'',customer:j.customer?.company||j.customer?.name||'',timeStart:calendarFirstValue(j,['startTime','onsiteTime','time','eventTime']),timeEnd:calendarFirstValue(j,['endTime','finishTime']),source:j});});
+ (data.portalooJobs||[]).forEach(j=>{const start=calendarFirstValue(j,['startDate','date','deliveryDate']);const end=j.rolling?start:(calendarFirstValue(j,['endDate','returnDate','collectionDate'])||start);if(!start||j.status==='Closed')return;add({id:j.id,name:j.name||'Portaloo booking',type:'portaloo',status:j.status||'Booked',start:String(start).slice(0,10),end:String(end||start).slice(0,10),detail:(j.quantity?j.quantity+' units · ':'')+'Portaloo Hire',location:j.what3words||j.location||'',customer:j.customer?.company||j.customer?.name||'',timeStart:calendarFirstValue(j,['deliveryTime','startTime','time']),timeEnd:calendarFirstValue(j,['collectionTime','endTime']),source:j});});
  const hires=(data&&data.v51&&Array.isArray(data.v51.hireVehicles))?data.v51.hireVehicles:[];
- hires.forEach(j=>{if(!j.start)return;const returned=!!j.returned||['Complete','Closed','Checked & Returned'].includes(j.status);const start=String(j.start).slice(0,10),end=String(j.end||j.start).slice(0,10);add({id:j.id,name:j.vehicleName||'Vehicle Hire',type:'hire',status:returned?'Returned':j.status,start,end,detail:[[j.registration,j.customer].filter(Boolean).join(' · ')||'Van Hire',returned?'Returned':''].filter(Boolean).join(' · ')});});
+ hires.forEach(j=>{if(!j.start)return;const returned=!!j.returned||['Complete','Closed','Checked & Returned'].includes(j.status);const start=String(j.start).slice(0,10),end=String(j.end||j.start).slice(0,10);add({id:j.id,name:j.vehicleName||'Vehicle Hire',type:'hire',status:returned?'Returned':j.status||'Booked',start,end,detail:[[j.registration,j.customer].filter(Boolean).join(' · ')||'Van Hire',returned?'Returned':''].filter(Boolean).join(' · '),location:j.location||'',customer:j.customer||'',timeStart:calendarFirstValue(j,['startTime','time']),timeEnd:calendarFirstValue(j,['endTime']),source:j});});
  return out;
 }
 function calendarEventsForRange(start,end){const a=calendarDateKey(start),b=calendarDateKey(end);return calendarGetEvents().filter(e=>e.start<=b&&e.end>=a).filter(e=>calendarFilter==='all'||(calendarFilter==='events'&&e.type==='event')||(calendarFilter==='vans'&&e.type==='hire')||(calendarFilter==='portaloo'&&e.type==='portaloo'));}
 function openCalendarEvent(type,id){if(type==='event'){showPage('events');setTimeout(()=>viewEventJob(id),80);}else if(type==='portaloo'){showPage('portaloo');setTimeout(()=>viewPortalooJob(id),80);}else if(type==='hire'){showPage('hireVehicles');setTimeout(()=>{const h=(data.v51?.hireVehicles||[]).find(x=>x.id===id);if(h)editHireVehicle(id);},80);}}
-function changeCalendarPeriod(delta){if(calendarView==='day')calendarDate=calendarAddDays(calendarDate,delta);else if(calendarView==='week')calendarDate=calendarAddDays(calendarDate,delta*7);else calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+delta,1);renderDashboardCalendar();}
+function changeCalendarPeriod(delta){if(calendarView==='timeline')calendarDate=calendarAddDays(calendarDate,delta);else if(calendarView==='agenda')calendarDate=calendarAddDays(calendarDate,delta*7);else calendarDate=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+delta,1);renderDashboardCalendar();}
 function resetCalendarPeriod(){calendarDate=new Date();calendarDate.setHours(0,0,0,0);renderDashboardCalendar();}
-function setCalendarView(view){calendarView=view;renderDashboardCalendar();}
+function setCalendarView(view){if(['agenda','timeline','month'].includes(view)){calendarView=view;renderDashboardCalendar();}}
 function setCalendarFilter(filter){calendarFilter=filter;renderDashboardCalendar();}
-function calendarPeriod(){if(calendarView==='day')return {start:new Date(calendarDate),end:new Date(calendarDate)};if(calendarView==='week'){const start=calendarWeekStart(calendarDate);return {start,end:calendarAddDays(start,6)};}return {start:new Date(calendarDate.getFullYear(),calendarDate.getMonth(),1),end:new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,0)};}
-function calendarRangeLabel(start,end){const opts={day:'numeric',month:'short'};if(calendarView==='day')return start.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});if(calendarView==='week'){const a=start.toLocaleDateString('en-GB',opts),b=end.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:start.getFullYear()===end.getFullYear()?undefined:'numeric'});return `${a} – ${b}`;}return start.toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
+function calendarPeriod(){if(calendarView==='timeline')return {start:new Date(calendarDate),end:new Date(calendarDate)};if(calendarView==='agenda'){const start=calendarWeekStart(calendarDate);return {start,end:calendarAddDays(start,6)};}return {start:new Date(calendarDate.getFullYear(),calendarDate.getMonth(),1),end:new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,0)};}
+function calendarRangeLabel(start,end){const opts={day:'numeric',month:'short'};if(calendarView==='timeline')return start.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});if(calendarView==='agenda'){const a=start.toLocaleDateString('en-GB',opts),b=end.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:start.getFullYear()===end.getFullYear()?undefined:'numeric'});return `${a} – ${b}`;}return start.toLocaleDateString('en-GB',{month:'long',year:'numeric'});}
 function calendarTypeClass(type){return type==='event'?'event':type==='hire'?'hire':'portaloo';}
+function calendarTypeLabel(type){return type==='event'?'Event':type==='hire'?'Van Hire':'Portaloo';}
+function calendarIcon(type){return type==='event'?'♧':type==='hire'?'🚐':'▤';}
 function calendarCounters(start,end){const all=calendarGetEvents().filter(e=>e.start<=calendarDateKey(end)&&e.end>=calendarDateKey(start));return {events:all.filter(e=>e.type==='event').length,vans:all.filter(e=>e.type==='hire').length,portaloo:all.filter(e=>e.type==='portaloo').length};}
+function calendarStatusClass(status){const s=String(status||'').toLowerCase();return s.includes('load')?'loading':s.includes('site')?'onsite':s.includes('collect')?'collect':s.includes('return')||s.includes('clos')?'closed':'booked';}
+function calendarTimeLabel(e){if(e.timeStart&&e.timeEnd)return `${e.timeStart}–${e.timeEnd}`;if(e.timeStart)return String(e.timeStart);return 'All day';}
+function calendarJobCard(e,compact=false){const loc=e.location||e.detail||'';return `<button class="bc-job-card ${calendarTypeClass(e.type)} ${compact?'compact':''}" onclick="openCalendarEvent('${e.type}','${String(e.id).replace(/'/g,"\\'")}')"><span class="bc-job-icon">${calendarIcon(e.type)}</span><span class="bc-job-main"><span class="bc-job-title">${esc(e.name)}</span><span class="bc-job-meta">${calendarTypeLabel(e.type)}${e.customer?' · '+esc(e.customer):''}</span><span class="bc-job-sub">${esc(calendarTimeLabel(e))}${loc?' · <span class="bc-job-location">⌖ '+esc(loc)+'</span>':''}</span></span><span class="bc-job-status ${calendarStatusClass(e.status)}">${esc(e.status||'Booked')}</span><span class="bc-job-chevron">›</span></button>`;}
+function calendarAgenda(start,end,events){
+ const groups=[];for(let d=new Date(start);d<=end;d=calendarAddDays(d,1)){const key=calendarDateKey(d),items=events.filter(e=>e.start<=key&&e.end>=key).sort((a,b)=>(a.timeStart||'99:99').localeCompare(b.timeStart||'99:99')||a.type.localeCompare(b.type));if(items.length)groups.push({date:new Date(d),items});}
+ if(!groups.length)return '<div class="bc-empty">Nothing booked in this period.</div>';
+ return `<div class="bc-agenda">${groups.map(g=>`<section class="bc-agenda-day"><header><div><small>${g.date.toLocaleDateString('en-GB',{weekday:'short'})}</small><b>${g.date.toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}</b></div><span>${g.items.length} ${g.items.length===1?'job':'jobs'}</span></header><div class="bc-agenda-items">${g.items.map(e=>calendarJobCard(e)).join('')}</div></section>`).join('')}</div>`;
+}
+function calendarHour(value,fallback){const m=String(value||'').match(/^(\d{1,2}):(\d{2})/);return m?Math.max(0,Math.min(23,Number(m[1])+Number(m[2])/60)):fallback;}
+function calendarTimeline(date,events){
+ const key=calendarDateKey(date),items=events.filter(e=>e.start<=key&&e.end>=key),timed=items.filter(e=>e.timeStart),untimed=items.filter(e=>!e.timeStart);
+ const startHour=6,endHour=22,rows=Array.from({length:endHour-startHour+1},(_,i)=>`<div class="bc-time-row"><span>${String(startHour+i).padStart(2,'0')}:00</span><i></i></div>`).join('');
+ const blocks=timed.map(e=>{const s=calendarHour(e.timeStart,8),en=calendarHour(e.timeEnd,s+1),top=Math.max(0,(s-startHour)*58),height=Math.max(54,(Math.min(endHour,en)-Math.max(startHour,s))*58);return `<button class="bc-timeline-block ${calendarTypeClass(e.type)}" style="--top:${top}px;--height:${height}px" onclick="openCalendarEvent('${e.type}','${String(e.id).replace(/'/g,"\\'")}')"><b>${esc(e.name)}</b><span>${calendarTypeLabel(e.type)} · ${esc(calendarTimeLabel(e))}</span>${e.location?`<small>⌖ ${esc(e.location)}</small>`:''}<em>${esc(e.status||'Booked')}</em></button>`;}).join('');
+ return `<div class="bc-timeline-wrap">${untimed.length?`<div class="bc-all-day"><b>All day</b>${untimed.map(e=>calendarJobCard(e,true)).join('')}</div>`:''}<div class="bc-timeline"><div class="bc-time-rail">${rows}</div><div class="bc-timeline-track" style="height:${(endHour-startHour+1)*58}px">${blocks||'<div class="bc-timeline-empty">No timed bookings for this day.</div>'}</div></div></div>`;
+}
 function calendarSpanWeek(weekStart,weekEvents,showOtherMonth){
  const weekEnd=calendarAddDays(weekStart,6),weekStartKey=calendarDateKey(weekStart),weekEndKey=calendarDateKey(weekEnd),today=calendarDateKey(new Date());
- const dateCells=Array.from({length:7},(_,i)=>{const d=calendarAddDays(weekStart,i),key=calendarDateKey(d);return `<div class="calendar-date ${showOtherMonth&&d.getMonth()!==calendarDate.getMonth()?'other-month':''} ${key===today?'today':''}">${d.getDate()}</div>`}).join('');
+ const dateCells=Array.from({length:7},(_,i)=>{const d=calendarAddDays(weekStart,i),key=calendarDateKey(d);return `<button type="button" class="calendar-date ${showOtherMonth&&d.getMonth()!==calendarDate.getMonth()?'other-month':''} ${key===today?'today':''} ${key===calendarDateKey(calendarDate)?'selected':''}" onclick="selectCalendarDate('${key}')">${d.getDate()}</button>`}).join('');
  const clipped=weekEvents.map(e=>({...e,clipStart:e.start<weekStartKey?weekStartKey:e.start,clipEnd:e.end>weekEndKey?weekEndKey:e.end})).sort((a,b)=>a.clipStart.localeCompare(b.clipStart)||b.clipEnd.localeCompare(a.clipEnd));
- const lanes=[];const bars=[];
+ const lanes=[],bars=[];
  clipped.forEach(e=>{const sd=calendarParseDate(e.clipStart),ed=calendarParseDate(e.clipEnd);const colStart=((sd-weekStart)/86400000)+1,colEnd=((ed-weekStart)/86400000)+2;let lane=0;while(lanes[lane]!==undefined&&lanes[lane]>colStart)lane++;lanes[lane]=colEnd;const label=(e.clipStart!==e.start?'‹ ':'')+e.name+(e.clipEnd!==e.end?' ›':'');bars.push(`<button class="calendar-span-bar ${calendarTypeClass(e.type)}" style="--bar-row:${lane+2};--bar-start:${colStart};--bar-end:${colEnd}" title="${esc(e.name)} · ${backstageDateUK(e.start)} to ${backstageDateUK(e.end)}" onclick="openCalendarEvent('${e.type}','${e.id}')">${esc(label)}</button>`);});
  const lanesCount=Math.max(1,lanes.length);return `<div class="calendar-week-row" style="--bar-lanes:${lanesCount};grid-template-rows:30px repeat(${lanesCount},22px)">${dateCells}${bars.join('')}</div>`;
 }
+function selectCalendarDate(key){const d=calendarParseDate(key);if(d){calendarDate=d;renderDashboardCalendar();}}
 function renderDashboardCalendar(){
  const box=document.getElementById('dashboardCalendar');if(!box)return;
- const {start,end}=calendarPeriod(),counts=calendarCounters(start,end),events=calendarEventsForRange(start,end);const weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+ const {start,end}=calendarPeriod(),counts=calendarCounters(start,end),events=calendarEventsForRange(start,end),weekdays=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
  let content='';
- if(calendarView==='day'){
-  const dayEvents=events.filter(e=>e.start<=calendarDateKey(start)&&e.end>=calendarDateKey(start)).sort((a,b)=>a.type.localeCompare(b.type));
-  content=dayEvents.length?`<div class="calendar-day-view">${dayEvents.map(e=>`<button class="calendar-day-entry ${calendarTypeClass(e.type)}" onclick="openCalendarEvent('${e.type}','${e.id}')"><div style="flex:1;min-width:0"><strong>${esc(e.name)}</strong><small>${esc(e.detail)}${e.start!==e.end?' · '+backstageDateUK(e.start)+' – '+backstageDateUK(e.end):''}</small></div><span>›</span></button>`).join('')}</div>`:'<div class="calendar-empty">Nothing booked for this day.</div>';
- }else if(calendarView==='week'){
-  content=`<div class="calendar-grid-redesign"><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr))">${weekdays.map(d=>`<div class="calendar-weekday-redesign">${d}</div>`).join('')}</div><div class="calendar-month-weeks">${calendarSpanWeek(start,events,false)}</div></div>`;
+ if(calendarView==='timeline'){
+  content=calendarTimeline(calendarDate,events);
+ }else if(calendarView==='agenda'){
+  content=calendarAgenda(start,end,events);
  }else{
-  const monthStart=new Date(calendarDate.getFullYear(),calendarDate.getMonth(),1),monthEnd=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,0),gridStart=calendarWeekStart(monthStart),gridEnd=calendarAddDays(calendarWeekStart(monthEnd),6);const rows=[];
+  const monthStart=new Date(calendarDate.getFullYear(),calendarDate.getMonth(),1),monthEnd=new Date(calendarDate.getFullYear(),calendarDate.getMonth()+1,0),gridStart=calendarWeekStart(monthStart),gridEnd=calendarAddDays(calendarWeekStart(monthEnd),6),rows=[];
   for(let ws=new Date(gridStart);ws<=gridEnd;ws=calendarAddDays(ws,7)){const we=calendarAddDays(ws,6),wevents=events.filter(e=>e.start<=calendarDateKey(we)&&e.end>=calendarDateKey(ws));rows.push(calendarSpanWeek(ws,wevents,true));}
-  content=`<div class="calendar-grid-redesign"><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr))">${weekdays.map(d=>`<div class="calendar-weekday-redesign">${d}</div>`).join('')}</div><div class="calendar-month-weeks">${rows.join('')}</div></div>`;
+  const selected=calendarDateKey(calendarDate),selectedEvents=calendarGetEvents().filter(e=>e.start<=selected&&e.end>=selected).filter(e=>calendarFilter==='all'||(calendarFilter==='events'&&e.type==='event')||(calendarFilter==='vans'&&e.type==='hire')||(calendarFilter==='portaloo'&&e.type==='portaloo'));
+  content=`<div class="calendar-grid-redesign"><div class="bc-month-weekdays">${weekdays.map(d=>`<div class="calendar-weekday-redesign">${d}</div>`).join('')}</div><div class="calendar-month-weeks">${rows.join('')}</div></div><div class="bc-month-selected"><h3>Jobs on ${calendarDate.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</h3>${calendarAgenda(calendarDate,calendarDate,selectedEvents)}</div>`;
  }
- box.innerHTML=`<div class="calendar-redesign"><div class="calendar-topline"><h2>Calendar</h2><div class="calendar-top-actions"><button class="secondary" onclick="resetCalendarPeriod()" title="Today">Today</button></div></div><div class="calendar-period-nav"><button class="secondary" onclick="changeCalendarPeriod(-1)" aria-label="Previous period">‹</button><div class="calendar-range">${esc(calendarRangeLabel(start,end))}</div><button class="secondary" onclick="changeCalendarPeriod(1)" aria-label="Next period">›</button></div><div class="calendar-counts"><div class="calendar-count events"><strong>${counts.events}</strong><span>Events</span></div><div class="calendar-count vans"><strong>${counts.vans}</strong><span>Van Hire</span></div><div class="calendar-count portaloo"><strong>${counts.portaloo}</strong><span>Portaloo Jobs</span></div></div><div class="calendar-view-tabs"><button class="${calendarView==='day'?'active':''}" onclick="setCalendarView('day')">Day</button><button class="${calendarView==='week'?'active':''}" onclick="setCalendarView('week')">Week</button><button class="${calendarView==='month'?'active':''}" onclick="setCalendarView('month')">Month</button></div><div class="calendar-filters"><button class="${calendarFilter==='all'?'active':''}" onclick="setCalendarFilter('all')">✓ All</button><button class="${calendarFilter==='events'?'active':''}" onclick="setCalendarFilter('events')"><i class="filter-dot events"></i>Events</button><button class="${calendarFilter==='vans'?'active':''}" onclick="setCalendarFilter('vans')"><i class="filter-dot vans"></i>Van Hire</button><button class="${calendarFilter==='portaloo'?'active':''}" onclick="setCalendarFilter('portaloo')"><i class="filter-dot portaloo"></i>Portaloo</button></div>${content}<div class="calendar-legend"><span><i class="calendar-dot events"></i>Events / Jobs</span><span><i class="calendar-dot vans"></i>Van Hire</span><span><i class="calendar-dot portaloo"></i>Portaloo Hire</span></div><div class="small muted" style="margin-top:8px">Tap a booking to open its record. Multi-day bookings span across the calendar.</div></div>`;
+ box.innerHTML=`<div class="calendar-redesign bc-smart-calendar"><div class="calendar-topline"><h2>Calendar</h2><div class="calendar-top-actions"><button class="secondary" onclick="resetCalendarPeriod()" title="Today">Today</button></div></div><div class="calendar-period-nav"><button class="secondary" onclick="changeCalendarPeriod(-1)" aria-label="Previous period">‹</button><div class="calendar-range">${esc(calendarRangeLabel(start,end))}</div><button class="secondary" onclick="changeCalendarPeriod(1)" aria-label="Next period">›</button></div><div class="calendar-counts"><div class="calendar-count events"><strong>${counts.events}</strong><span>Events</span></div><div class="calendar-count vans"><strong>${counts.vans}</strong><span>Van Hire</span></div><div class="calendar-count portaloo"><strong>${counts.portaloo}</strong><span>Portaloo Jobs</span></div></div><div class="calendar-view-tabs"><button class="${calendarView==='agenda'?'active':''}" onclick="setCalendarView('agenda')">Agenda</button><button class="${calendarView==='timeline'?'active':''}" onclick="setCalendarView('timeline')">Timeline</button><button class="${calendarView==='month'?'active':''}" onclick="setCalendarView('month')">Month</button></div><div class="calendar-filters"><button class="${calendarFilter==='all'?'active':''}" onclick="setCalendarFilter('all')">✓ All</button><button class="${calendarFilter==='events'?'active':''}" onclick="setCalendarFilter('events')"><i class="filter-dot events"></i>Events</button><button class="${calendarFilter==='vans'?'active':''}" onclick="setCalendarFilter('vans')"><i class="filter-dot vans"></i>Van Hire</button><button class="${calendarFilter==='portaloo'?'active':''}" onclick="setCalendarFilter('portaloo')"><i class="filter-dot portaloo"></i>Portaloo</button></div>${content}<div class="calendar-legend"><span><i class="calendar-dot events"></i>Events / Jobs</span><span><i class="calendar-dot vans"></i>Van Hire</span><span><i class="calendar-dot portaloo"></i>Portaloo Hire</span></div><div class="small muted" style="margin-top:8px">Tap a booking to open its record. Multi-day bookings appear on every date they cover.</div></div>`;
 }
 function syncBackstageMenuActive(page){document.querySelectorAll('.menu-drawer-link').forEach(b=>{const active=String(b.dataset.page||'')===String(page||'');b.classList.toggle('active',active);if(active){b.setAttribute('aria-current','page')}else{b.removeAttribute('aria-current')}});}
 function toggleBackstageMenu(){if(!document.body.classList.contains('backstage-menu-open')){const mb=document.getElementById('modalBody');if(mb&&mb.querySelector('.profile-title-row')&&typeof closeModal==='function')closeModal();const current=[...document.querySelectorAll('#backstageMenuDrawer .menu-drawer-link')].map(b=>b.dataset.page).find(id=>{const el=document.getElementById(id);return el&&!el.classList.contains('hidden')});if(current)syncBackstageMenuActive(current);}document.body.classList.toggle('backstage-menu-open');const drawer=document.getElementById('backstageMenuDrawer');if(drawer)drawer.setAttribute('aria-hidden',document.body.classList.contains('backstage-menu-open')?'false':'true');}
