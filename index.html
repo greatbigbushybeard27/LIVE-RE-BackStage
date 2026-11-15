@@ -1086,6 +1086,72 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
 }
 .bc-smart-calendar .calendar-month-weeks .calendar-date.other-month{color:#65766d!important}
 </style>
+
+<style id="bv192-calendar-subtle-theme">
+/* BV1.9.2: restrained calendar cards and text-only selected view */
+.bc-smart-calendar .calendar-view-tabs button,
+.bc-smart-calendar .calendar-view-tabs button.active{
+  background:transparent!important;
+  background-image:none!important;
+  border:1px solid transparent!important;
+  box-shadow:none!important;
+  color:#dce8e0!important;
+  font-weight:750!important;
+}
+.bc-smart-calendar .calendar-view-tabs button.active{
+  color:#55d69a!important;
+  border-color:transparent!important;
+  text-decoration:underline;
+  text-decoration-color:#35b879;
+  text-decoration-thickness:2px;
+  text-underline-offset:7px;
+}
+.bc-smart-calendar .bc-agenda-day{
+  background:#09140f!important;
+  border:1px solid #20372b!important;
+  border-radius:16px!important;
+  box-shadow:none!important;
+}
+.bc-smart-calendar .bc-agenda-day>header{
+  background:#101f17!important;
+  border-bottom:1px solid #294638!important;
+}
+.bc-smart-calendar .bc-agenda-day>header small{color:#9db7a8!important}
+.bc-smart-calendar .bc-agenda-day>header b{color:#eef5ef!important}
+.bc-smart-calendar .bc-agenda-day>header>span{color:#83cda5!important}
+.bc-smart-calendar .bc-agenda-items{background:transparent!important}
+.bc-smart-calendar .bc-job-card{
+  background:#0b1711!important;
+  border:1px solid #294337!important;
+  border-left:4px solid #bd6682!important;
+  border-radius:12px!important;
+  box-shadow:none!important;
+  color:#edf5ef!important;
+}
+.bc-smart-calendar .bc-job-card.hire{border-left-color:#5c9bcf!important}
+.bc-smart-calendar .bc-job-card.portaloo{border-left-color:#69b88f!important}
+.bc-smart-calendar .bc-job-icon{
+  background:#30202a!important;
+  color:#d98ba6!important;
+}
+.bc-smart-calendar .bc-job-card.hire .bc-job-icon{
+  background:#192c3b!important;color:#91bce0!important;
+}
+.bc-smart-calendar .bc-job-card.portaloo .bc-job-icon{
+  background:#192c22!important;color:#91c9a8!important;
+}
+.bc-smart-calendar .bc-job-title{color:#f0f5f1!important}
+.bc-smart-calendar .bc-job-meta,
+.bc-smart-calendar .bc-job-sub{color:#aabbb1!important}
+.bc-smart-calendar .bc-job-status{
+  background:#25332b!important;color:#c1d1c7!important;
+}
+.bc-smart-calendar .bc-job-status.loading{background:#493716!important;color:#f0cf86!important}
+.bc-smart-calendar .bc-job-status.onsite{background:#183a2b!important;color:#9bd5b4!important}
+.bc-smart-calendar .bc-job-status.collect{background:#1c3040!important;color:#a9c8e2!important}
+.bc-smart-calendar .bc-job-status.closed{background:#28302b!important;color:#b8c2bc!important}
+.bc-smart-calendar .bc-job-chevron{color:#8ba99a!important}
+</style>
 </head>
 <body>
 <header><div class="app-header-inner"><img class="app-header-banner" src="regency-banner.png" alt="Regency Events Backstage"><button type="button" id="headerSearchButton" class="header-search-button" aria-label="Scan QR code" title="Scan QR code" onclick="scanHeaderQR()">▦</button><div class="header-userbar"><div class="header-statuses"><button type="button" id="headerCrewButton" class="header-status header-crew-status" aria-label="Open My Profile" title="Open My Profile" onclick="event.preventDefault();event.stopPropagation();if(currentUser()){openCrewProfile()}else{showLoginOverlay()}"><span class="header-status-icon" id="headerCrewIcon">🧔</span><div><small>CREW</small><strong id="headerUser">No crew logged in</strong></div></button><button class="header-status header-cloud-status" onclick="cloudAuthModal()" aria-label="Cloud connection status"><span class="header-status-icon brain-status-icon">🧠</span><div class="brain-status-copy"><small>LLOYD'S BRAIN</small><strong id="headerCloud"><span class="cloud-dot"></span>Offline</strong></div></button><button type="button" class="header-wind-status" title="Open Guernsey wind forecast" aria-label="Open Guernsey wind forecast" onclick="showPage('windForecast')"><span id="headerWindDot" class="wind-dot"></span><div><small>WIND</small><strong id="headerWind">-- / --</strong></div></button></div></div></div></div></header>
@@ -1109,7 +1175,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.9.1" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.9.1</div>
+<div id="backstage-app-version" data-release="BV1.9.2" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.9.2</div>
 </aside>
 <main>
 <section id="dashboard"></section>
