@@ -1208,7 +1208,7 @@ body.light-theme .task-card .task-meta {color:#586b60!important;-webkit-text-fil
  <div class="google-sync-card" style="margin:6px 0;padding:12px"><b>Google Calendar</b><div id="googleSyncStatus" class="google-sync-status">Not connected</div><div class="google-sync-actions" style="display:grid;grid-template-columns:1fr;gap:6px;margin-top:8px"><button id="googleConnectBtn" onclick="connectGoogleCalendar()">Connect Google Calendar</button><button class="secondary" onclick="syncAllJobsToGoogle()">Sync existing jobs</button><button class="secondary" onclick="disconnectGoogleCalendar()">Disconnect</button></div><div class="small" style="margin-top:8px">Sync jobs to your primary Google Calendar.</div></div>
  <div class="card dashboard-weather-card" style="margin:8px 0;padding:12px"><div class="section-head"><div><b>🌬️ Guernsey Weather</b><div id="weatherUpdated" class="small">Loading…</div></div></div><div id="dashboardWeather"><div class="weather-loading">Loading live weather…</div></div></div>
  <div class="card dashboard-activity-card" style="margin:8px 0;padding:12px"><div class="section-head"><b>📋 Recent Activity</b><button class="secondary" onclick="menuShowPage('activity')">Open</button></div><div id="dashboardActivityList"></div></div>
-<div id="backstage-app-version" data-release="BV1.9.5" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.9.5</div>
+<div id="backstage-app-version" data-release="BV1.9.6" style="margin:18px 8px 4px;padding:12px 4px 4px;border-top:1px solid #20352a;color:#82958b;font-size:11px;letter-spacing:.7px;text-align:center">BV1.9.6</div>
 </aside>
 <main>
 <section id="dashboard"></section>
@@ -2196,6 +2196,20 @@ function vehicleSafetyLabel(vehicleId){
  const d=vehicleCriticalDefect(vehicleId);
  return d?('Critical: '+(d.description||'Unresolved defect')):'Vehicle marked out of service';
 }
+// Keep the hire form's vehicle safety warning and Save control in sync with the selected van.
+window.validateHireVehicleSafety=function(){
+ const select=document.getElementById('hv_van');
+ const warning=document.getElementById('hv_safety_warning');
+ const saveButton=[...document.querySelectorAll('#modal button')].find(b=>/^saveHireVehicle\(/.test(b.getAttribute('onclick')||''));
+ const vehicleId=select?.value||'';
+ const blocked=!!(vehicleId&&vehicleSafetyBlocked(vehicleId));
+ if(warning){
+  warning.style.display=blocked?'block':'none';
+  warning.textContent=blocked?'This vehicle cannot be hired: '+vehicleSafetyLabel(vehicleId)+'. Resolve the defect or select another vehicle.':'';
+ }
+ if(saveButton)saveButton.disabled=blocked;
+ return !blocked;
+};
 function vehicleAssignmentChoices(className,selectedIds){
  const selected=(selectedIds||[]).map(String);
  return (data.vans||[]).map(vn=>{
