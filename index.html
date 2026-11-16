@@ -6021,9 +6021,28 @@ window.openHireAgreementCustomerForm=async function(id,token){
    btn.disabled=true;btn.textContent='Submitting securely…';msg.textContent='';
    try{
     const result=await hApi({action:'submit',customer:values,accepted:true,signature:canvas.toDataURL('image/png')},token||null);
-    msg.innerHTML=`<b style="color:#9be0bf">Agreement signed and saved.</b><p>Your agreement reference: ${hEsc(result.reference)}</p><div class="actions"><button class="secondary" id="ha_download">Save signed PDF</button><button class="secondary" id="ha_email">Email me a copy</button></div>`;
-    document.getElementById('ha_download').onclick=()=>{const a=document.createElement('a');a.href=result.pdfUrl;a.download='Peugeot-Boxer-Signed-Agreement.pdf';a.target='_blank';a.click()};
-    document.getElementById('ha_email').onclick=()=>{location.href=`mailto:${encodeURIComponent(values.email)}?subject=${encodeURIComponent('Your signed Peugeot Boxer rental agreement')}&body=${encodeURIComponent('Your signed agreement has been saved. You can download your copy here (link expires in 1 hour):\n\n'+result.pdfUrl)}`};
+    msg.innerHTML=`<b style="color:#9be0bf">Agreement signed and saved.</b><p>Your agreement reference: ${hEsc(result.reference)}</p><div class="actions"><button class="secondary" id="ha_download">Download signed PDF</button><button class="secondary" id="ha_email">Email me a copy</button></div><p class="small muted" style="margin-top:9px">Email destination: <b>${hEsc(values.email)}</b></p><div class="small" id="ha_email_status" role="status" aria-live="polite">Your signed agreement is ready. You can download it now or email a copy to the address above.</div>`;
+    document.getElementById('ha_download').onclick=()=>{const a=document.createElement('a');a.href=result.pdfUrl;a.download='Peugeot-Boxer-Signed-Agreement.pdf';a.target='_blank';document.body.appendChild(a);a.click();a.remove()};
+    const emailButton=document.getElementById('ha_email');
+    emailButton.onclick=async()=>{
+     const emailStatus=document.getElementById('ha_email_status');
+     if(!emailStatus||emailButton.disabled)return;
+     emailButton.disabled=true;emailButton.textContent='Sending…';emailStatus.textContent='Sending the signed PDF to '+values.email+' and a separate copy to Regency Events…';
+     try{
+      const sent=await hApi({action:'send_copy'},token||null);
+      const customerSent=sent?.email?.customer==='sent';
+      const companySent=sent?.email?.company==='sent';
+      const details=[];
+      details.push(customerSent?'Your copy has been emailed to '+values.email+'.':'Your email copy has not been sent.');
+      details.push(companySent?'Regency Events has received its copy.':'Regency Events has not yet received its copy.');
+      emailStatus.textContent=details.join(' ')+(sent?.email?.error?' Details: '+sent.email.error:'');
+      if(customerSent&&companySent){emailStatus.style.color='#9be0bf';emailButton.textContent='Email copies sent';}
+      else{emailStatus.style.color='#f0c27b';emailButton.disabled=false;emailButton.textContent='Retry email';}
+     }catch(emailError){
+      emailStatus.style.color='#f0c27b';emailStatus.textContent='Your agreement is safely signed, but the email could not be completed. '+emailError.message;
+      emailButton.disabled=false;emailButton.textContent='Retry email';
+     }
+    };
     if(id&&b){b.rentalAgreementStatus='Signed';b.rentalAgreementSignedAt=new Date().toISOString();b.rentalAgreementReference=result.reference;b.rentalAgreementPdfPath=result.pdfPath;save();renderHireVehicles?.()}
     btn.remove();
    }catch(e){msg.textContent='Could not submit agreement: '+e.message;btn.disabled=false;btn.textContent='Accept & Sign Agreement'}
