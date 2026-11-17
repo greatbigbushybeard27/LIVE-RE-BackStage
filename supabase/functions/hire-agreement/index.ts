@@ -23,10 +23,11 @@ const admin=createClient(supabaseUrl,serviceKey,{auth:{persistSession:false}});
 const sha=async(v:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)))).map(x=>x.toString(16).padStart(2,"0")).join("");
 const clean=(v:any,max=500)=>String(v??"").trim().slice(0,max);
 function wrap(text:string,font:any,size:number,max:number){const words=text.split(/\s+/);const lines:string[]=[];let line="";for(const w of words){const test=line?line+" "+w:w;if(font.widthOfTextAtSize(test,size)>max&&line){lines.push(line);line=w}else line=test}if(line)lines.push(line);return lines}
-async function makePdf(booking:any,customer:any,signaturePng:Uint8Array,reference:string,signedAt:string,termsList:string[]){
+async function makePdf(booking:any,customer:any,signaturePng:Uint8Array,reference:string,signedAt:string,termsList:string[],recovered=false){
  const pdf=await PDFDocument.create();const font=await pdf.embedFont(StandardFonts.Helvetica);const bold=await pdf.embedFont(StandardFonts.HelveticaBold);const sig=await pdf.embedPng(signaturePng);
  let page=pdf.addPage([595,842]),y=800;const margin=48,width=499;
  const draw=(rawText:string,size=10,isBold=false,space=5)=>{const text=rawText.replaceAll("£","GBP ").replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,"-").replace(/•/g,"-").replace(/[^\x20-\x7E]/g," ");const f=isBold?bold:font;for(const line of wrap(text,f,size,width)){if(y<75){page=pdf.addPage([595,842]);y=800}page.drawText(line,{x:margin,y,size,font:f,color:rgb(.08,.12,.09)});y-=size+3}y-=space};
+ if(recovered)draw("RECOVERED COPY - RECONSTRUCTED FROM SIGNING-TIME RECORDS",10,true,9);
  draw("REGENCY EVENTS LTD",15,true,5);draw("PEUGEOT BOXER RENTAL AGREEMENT",13,true,12);
  draw(`Vehicle: ${booking.vehicleName||"Peugeot Boxer"}   Registration: ${booking.registration||""}`,10,true);
  draw(`Hire period: ${booking.start||"Not set"} to ${booking.end||"Not set"}`);
@@ -92,23 +93,56 @@ Deno.serve(async(req)=>{
    const bookingId=clean(body.bookingId,150);
    if(!bookingId)return json(req,{error:"Booking ID is missing."},400);
    const {data:rows,error:findErr}=await admin.from("vehicle_hire_agreements")
-    .select("id,status,reference,pdf_path,pdf_sha256,pdf_size_bytes,booking_id")
-    .eq("booking_id",bookingId).eq("status","signed")
+    .select("*").eq("booking_id",bookingId).eq("status","signed")
     .order("created_at",{ascending:false}).limit(1);
    if(findErr)throw findErr;
    const agreement=rows?.[0];
-   if(!agreement?.pdf_path)return json(req,{error:"No stored signed PDF was found for this booking."},404);
-   // Retrieve and verify the stored object. Never regenerate it from the signature.
-   const {data:fileData,error:fileErr}=await admin.storage.from("hire-agreements").download(agreement.pdf_path);
-   if(fileErr||!fileData)throw fileErr||new Error("The original signed PDF could not be retrieved.");
-   const bytes=new Uint8Array(await fileData.arrayBuffer());
-   const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
-   if(agreement.pdf_sha256&&digest!==agreement.pdf_sha256){
-    return json(req,{error:"The stored signed PDF failed its integrity check. It has not been changed or reconstructed. Please contact an administrator.",integrity:"failed",reference:agreement.reference},409);
+   if(!agreement)return json(req,{error:"No signed hire agreement was found for this booking."},404);
+
+   // First choice is always the exact PDF produced at signing. Never rebuild over it.
+   if(agreement.pdf_path){
+    const {data:fileData,error:fileErr}=await admin.storage.from("hire-agreements").download(agreement.pdf_path);
+    if(!fileErr&&fileData){
+     const bytes=new Uint8Array(await fileData.arrayBuffer());
+     const digest=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
+     if(agreement.pdf_sha256&&digest!==agreement.pdf_sha256){
+      return json(req,{error:"The stored signed PDF failed its integrity check. It has not been changed or reconstructed.",integrity:"failed",reference:agreement.reference},409);
+     }
+     const {data:urlData,error:urlErr}=await admin.storage.from("hire-agreements").createSignedUrl(agreement.pdf_path,900);
+     if(urlErr)throw urlErr;
+     return json(req,{ok:true,pdfUrl:urlData.signedUrl,reference:agreement.reference,integrity:agreement.pdf_sha256?"verified":"legacy_unverified",recovered:false,sha256:digest,sizeBytes:bytes.byteLength});
+    }
+    const statusCode=String(fileErr?.statusCode||fileErr?.status||"");
+    if(statusCode&&!statusCode.includes("404"))throw fileErr;
    }
-   const {data:urlData,error:urlErr}=await admin.storage.from("hire-agreements").createSignedUrl(agreement.pdf_path,900);
+
+   // Recovery is allowed only from the frozen booking, customer, terms and template version captured at signing.
+   if(!agreement.accepted||!agreement.booking_snapshot||!agreement.customer_details||!agreement.signature_path||!agreement.reference||!agreement.signed_at){
+    return json(req,{error:"The original PDF is missing and the signing-time records are incomplete. No replacement was created.",integrity:"recovery_unavailable"},409);
+   }
+   if(agreement.template_key!=="peugeot-boxer-v1"||agreement.template_version!=="1"){
+    return json(req,{error:"The original PDF is missing and this agreement's exact saved form version is not available for recovery. No replacement was created.",integrity:"recovery_version_unavailable",templateKey:agreement.template_key,templateVersion:agreement.template_version},409);
+   }
+   const savedTerms=Array.isArray(agreement.terms_snapshot)?agreement.terms_snapshot:null;
+   if(!savedTerms)return json(req,{error:"The original PDF is missing and the saved signing-time form terms are unavailable. No replacement was created.",integrity:"recovery_unavailable"},409);
+   const {data:sigFile,error:sigErr}=await admin.storage.from("hire-agreements").download(agreement.signature_path);
+   if(sigErr||!sigFile)return json(req,{error:"The original PDF is missing and the original signature image could not be retrieved. No replacement was created.",integrity:"recovery_unavailable"},409);
+   const sigBytes=new Uint8Array(await sigFile.arrayBuffer());
+   const recoveredPdf=await makePdf(agreement.booking_snapshot,agreement.customer_details,sigBytes,agreement.reference,agreement.signed_at,savedTerms,true);
+   const recoveredHash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",recoveredPdf))).map(x=>x.toString(16).padStart(2,"0")).join("");
+   const recoveredPath=`${agreement.id}/recovered/${agreement.reference}-recovered-${Date.now()}.pdf`;
+   const {error:uploadErr}=await admin.storage.from("hire-agreements").upload(recoveredPath,recoveredPdf,{contentType:"application/pdf",upsert:false});
+   if(uploadErr)throw uploadErr;
+   const {error:auditErr}=await admin.from("vehicle_hire_agreement_recoveries").insert({
+    agreement_id:agreement.id,recovered_pdf_path:recoveredPath,pdf_sha256:recoveredHash,
+    pdf_size_bytes:recoveredPdf.byteLength,source_template_key:agreement.template_key,
+    source_template_version:agreement.template_version,recovered_by:userData.user.id,
+    recovery_reason:agreement.pdf_path?"Original signed PDF object was missing from storage.":"No original signed PDF path was recorded."
+   });
+   if(auditErr)throw auditErr;
+   const {data:urlData,error:urlErr}=await admin.storage.from("hire-agreements").createSignedUrl(recoveredPath,900);
    if(urlErr)throw urlErr;
-   return json(req,{ok:true,pdfUrl:urlData.signedUrl,reference:agreement.reference,integrity:agreement.pdf_sha256?"verified":"legacy_unverified",sha256:digest,sizeBytes:bytes.byteLength});
+   return json(req,{ok:true,pdfUrl:urlData.signedUrl,reference:agreement.reference,integrity:"reconstructed_from_signing_snapshot",recovered:true,sha256:recoveredHash,sizeBytes:recoveredPdf.byteLength});
   }
   const raw=req.headers.get("x-agreement-token")||"";
   if(!raw||raw.length>200)return json(req,{error:"Signing link is invalid."},400);
