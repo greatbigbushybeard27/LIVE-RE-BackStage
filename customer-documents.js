@@ -65,10 +65,15 @@
   if(!doc||!doc.storageBucket||!doc.cloudPath)return alert('This signed agreement could not be found.');
   const tab=window.open('about:blank','_blank');
   try{
-   if(typeof supabaseClient==='undefined')throw new Error('Cloud storage is not connected.');
-   const result=await supabaseClient.storage.from(doc.storageBucket).createSignedUrl(doc.cloudPath,60);
+   if(typeof supabaseClient==='undefined'||!supabaseClient)throw new Error('Cloud storage is not connected.');
+   const bookingId=String(doc._linkedBooking?.id||'');
+   if(!bookingId)throw new Error('The hire booking link is missing.');
+   // Rebuild the signed PDF from its saved agreement and signature, then issue a fresh secure URL.
+   const result=await supabaseClient.functions.invoke('hire-agreement',{body:{action:'repair_pdf',bookingId}});
    if(result.error)throw result.error;
-   if(tab)tab.location.href=result.data.signedUrl;else window.location.href=result.data.signedUrl;
+   if(result.data?.error)throw new Error(result.data.error);
+   if(!result.data?.pdfUrl)throw new Error('The agreement service did not return a PDF link.');
+   if(tab)tab.location.href=result.data.pdfUrl;else window.location.href=result.data.pdfUrl;
   }catch(err){if(tab)tab.close();console.error('Could not open signed hire agreement',err);alert('Could not open this agreement: '+(err?.message||err));}
  };
  window.addCustomerDocumentBV179=async function(){
