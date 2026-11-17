@@ -23,7 +23,8 @@ const admin=createClient(supabaseUrl,serviceKey,{auth:{persistSession:false}});
 const sha=async(v:string)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(v)))).map(x=>x.toString(16).padStart(2,"0")).join("");
 const clean=(v:any,max=500)=>String(v??"").trim().slice(0,max);
 function wrap(text:string,font:any,size:number,max:number){const words=text.split(/\s+/);const lines:string[]=[];let line="";for(const w of words){const test=line?line+" "+w:w;if(font.widthOfTextAtSize(test,size)>max&&line){lines.push(line);line=w}else line=test}if(line)lines.push(line);return lines}
-async function makePdf(booking:any,customer:any,signaturePng:Uint8Array,reference:string,signedAt:string,termsList:string[],recovered=false){
+// Version 1 renderer is intentionally retained unchanged for recovery of agreements signed on template version 1.
+async function makePdfV1(booking:any,customer:any,signaturePng:Uint8Array,reference:string,signedAt:string,termsList:string[],recovered=false){
  const pdf=await PDFDocument.create();const font=await pdf.embedFont(StandardFonts.Helvetica);const bold=await pdf.embedFont(StandardFonts.HelveticaBold);const sig=await pdf.embedPng(signaturePng);
  let page=pdf.addPage([595,842]),y=800;const margin=48,width=499;
  const draw=(rawText:string,size=10,isBold=false,space=5)=>{const text=rawText.replaceAll("£","GBP ").replace(/[’‘]/g,"'").replace(/[“”]/g,'"').replace(/[–—]/g,"-").replace(/•/g,"-").replace(/[^\x20-\x7E]/g," ");const f=isBold?bold:font;for(const line of wrap(text,f,size,width)){if(y<75){page=pdf.addPage([595,842]);y=800}page.drawText(line,{x:margin,y,size,font:f,color:rgb(.08,.12,.09)});y-=size+3}y-=space};
@@ -113,7 +114,8 @@ Deno.serve(async(req)=>{
      return json(req,{ok:true,pdfUrl:urlData.signedUrl,reference:agreement.reference,integrity:agreement.pdf_sha256?"verified":"legacy_unverified",recovered:false,sha256:digest,sizeBytes:bytes.byteLength});
     }
     const statusCode=String(fileErr?.statusCode||fileErr?.status||"");
-    if(statusCode&&!statusCode.includes("404"))throw fileErr;
+    const missingObject=statusCode.includes("404")||/not found|object missing/i.test(String(fileErr?.message||""));
+    if(!missingObject)throw fileErr||new Error("The original signed PDF could not be retrieved.");
    }
 
    // Recovery is allowed only from the frozen booking, customer, terms and template version captured at signing.
@@ -128,7 +130,7 @@ Deno.serve(async(req)=>{
    const {data:sigFile,error:sigErr}=await admin.storage.from("hire-agreements").download(agreement.signature_path);
    if(sigErr||!sigFile)return json(req,{error:"The original PDF is missing and the original signature image could not be retrieved. No replacement was created.",integrity:"recovery_unavailable"},409);
    const sigBytes=new Uint8Array(await sigFile.arrayBuffer());
-   const recoveredPdf=await makePdf(agreement.booking_snapshot,agreement.customer_details,sigBytes,agreement.reference,agreement.signed_at,savedTerms,true);
+   const recoveredPdf=await makePdfV1(agreement.booking_snapshot,agreement.customer_details,sigBytes,agreement.reference,agreement.signed_at,savedTerms,true);
    const recoveredHash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",recoveredPdf))).map(x=>x.toString(16).padStart(2,"0")).join("");
    const recoveredPath=`${agreement.id}/recovered/${agreement.reference}-recovered-${Date.now()}.pdf`;
    const {error:uploadErr}=await admin.storage.from("hire-agreements").upload(recoveredPath,recoveredPdf,{contentType:"application/pdf",upsert:false});
@@ -197,7 +199,7 @@ Deno.serve(async(req)=>{
   const sigBytes=Uint8Array.from(atob(match[1]),x=>x.charCodeAt(0));
   const signedAt=new Date().toISOString();const reference="RE-"+new Date().toISOString().slice(0,10).replaceAll("-","")+"-"+crypto.randomUUID().slice(0,8).toUpperCase();
   const savedTerms=Array.isArray(agreement.terms_snapshot)?agreement.terms_snapshot:terms;
-  const pdf=await makePdf(agreement.booking_snapshot,c,sigBytes,reference,signedAt,savedTerms);
+  const pdf=await makePdfV1(agreement.booking_snapshot,c,sigBytes,reference,signedAt,savedTerms);
   const base=`${agreement.id}/${reference}`;
   const {error:pdfErr}=await admin.storage.from("hire-agreements").upload(`${base}.pdf`,pdf,{contentType:"application/pdf",upsert:false});
   if(pdfErr)throw pdfErr;
