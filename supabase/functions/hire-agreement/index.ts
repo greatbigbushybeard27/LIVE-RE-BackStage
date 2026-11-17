@@ -86,6 +86,33 @@ Deno.serve(async(req)=>{
    if(statusErr)throw statusErr;
    return json(req,{agreement:rows?.[0]||null});
   }
+  if(action==="list_customer_agreements"){
+   const auth=req.headers.get("Authorization")||"";
+   if(!auth.startsWith("Bearer "))return json(req,{error:"Crew login required."},401);
+   const {data:userData,error:userErr}=await admin.auth.getUser(auth.slice(7));
+   if(userErr||!userData.user)return json(req,{error:"Your Backstage session has expired. Please sign in again."},401);
+   const customerEmail=clean(body.customerEmail,254).toLowerCase();
+   const customerName=clean(body.customerName,200).toLowerCase();
+   if(!customerEmail&&!customerName)return json(req,{agreements:[]});
+   let query=admin.from("vehicle_hire_agreements")
+    .select("id,booking_id,reference,status,pdf_path,created_at,signed_at,customer_details,booking_snapshot")
+    .eq("status","signed").order("created_at",{ascending:false}).limit(100);
+   if(customerEmail)query=query.eq("customer_details->>email",customerEmail);
+   else query=query.ilike("customer_details->>hirer",customerName);
+   const {data:rows,error:listErr}=await query;
+   if(listErr)throw listErr;
+   const agreements=(rows||[]).filter(a=>{
+    const email=String(a.customer_details?.email||a.booking_snapshot?.email||"").trim().toLowerCase();
+    const name=String(a.customer_details?.hirer||a.booking_snapshot?.customer||"").trim().toLowerCase();
+    return (customerEmail&&email===customerEmail)||(!customerEmail&&customerName&&name===customerName);
+   }).map(a=>({
+    id:a.id,bookingId:a.booking_id,reference:a.reference,pdfPath:a.pdf_path,
+    createdAt:a.signed_at||a.created_at,hirer:a.customer_details?.hirer||a.booking_snapshot?.customer||"",
+    vehicleName:a.booking_snapshot?.vehicleName||"Vehicle hire",
+    bookingRef:a.booking_snapshot?.displayRef||a.booking_id
+   }));
+   return json(req,{agreements});
+  }
   if(action==="get_pdf"){
    const auth=req.headers.get("Authorization")||"";
    if(!auth.startsWith("Bearer "))return json(req,{error:"Crew login required."},401);
