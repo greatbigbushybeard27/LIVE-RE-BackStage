@@ -100,3 +100,148 @@
 
  console.info('Backstage V71.77B crew database integration loaded');
 })();
+
+
+/* V71.78 crew identity resolution fix.
+   Resolve active Auth accounts against the database identity-link table only
+   after the shared company state is present. Existing identity-link rows are read-only here. */
+(function(){
+ 'use strict';
+ const CRAIG_ID='user-muq3mz6d-c8ci';
+ const CRAIG_AUTH_ID='83f4767c-6352-4fd3-9f4c-81fce5f620e6';
+ let linkedProfileIds=new Set();
+ let resolvedAuthId='';
+ let resolvedProfileId='';
+ let resolving=false;
+ let lastUsersKey='';
+
+ function authId(){
+  try{return typeof cloudSession!=='undefined'?(cloudSession?.user?.id||''):'';}catch(e){return '';}
+ }
+ function usersKey(){
+  const a=authId();
+  const ids=(typeof data!=='undefined'&&Array.isArray(data.users)?data.users:[])
+   .map(u=>String(u.id)+'/'+String(u.authUserId||'')).sort().join('|');
+  return a+'::'+ids;
+ }
+
+ const originalMerge=window.applyCraigCloudIdentityMerge;
+ window.applyCraigCloudIdentityMerge=function(target){
+  let changed=typeof originalMerge==='function'?!!originalMerge(target):false;
+  const craig=target?.users?.find(u=>String(u.id)===CRAIG_ID);
+  if(craig){
+   if(craig.role!=='seniorCrew'){craig.role='seniorCrew';changed=true;}
+   if(craig.systemAdmin!==true){craig.systemAdmin=true;changed=true;}
+   if(craig.authUserId===CRAIG_AUTH_ID&&Object.prototype.hasOwnProperty.call(craig,'cloudOnly')){delete craig.cloudOnly;changed=true;}
+  }
+  return changed;
+ };
+
+ window.currentUser=function(){
+  const activeAuth=authId();
+  if(activeAuth){
+   if(resolvedAuthId===activeAuth&&resolvedProfileId){
+    const resolved=(data.users||[]).find(u=>String(u.id)===String(resolvedProfileId));
+    if(resolved){resolved.role=normalizeRole(resolved.role);return resolved;}
+   }
+   const direct=(data.users||[]).find(u=>String(u.authUserId||'')===String(activeAuth));
+   if(direct){direct.role=normalizeRole(direct.role);return direct;}
+   return null;
+  }
+  const localId=localStorage.getItem('regency_current_user');
+  const local=localId?(data.users||[]).find(u=>String(u.id)===String(localId)):null;
+  if(local)local.role=normalizeRole(local.role);
+  return local||null;
+ };
+ window.isSystemAdministrator=function(){return window.currentUser()?.systemAdmin===true;};
+ window.isDirector=function(){return normalizeRole(window.currentUser()?.role)==='director'||window.isSystemAdministrator();};
+ window.crewUsers=function(){
+  return (data.users||[]).filter(u=>!u.cloudOnly||!!u.authUserId||linkedProfileIds.has(String(u.id)));
+ };
+
+ window.ensureCloudCrew=async function(){
+  const activeAuth=authId();
+  if(!activeAuth||typeof supabaseClient==='undefined'||!supabaseClient)return;
+  if(resolving)return;
+  resolving=true;
+  try{
+   let changed=window.applyCraigCloudIdentityMerge(data);
+   try{
+    const {data:links,error}=await supabaseClient.from('backstage_crew_identity_links')
+     .select('crew_profile_id').eq('org_id','regency-events').eq('is_active',true);
+    if(error)throw error;
+    linkedProfileIds=new Set((links||[]).map(x=>String(x.crew_profile_id)));
+   }catch(error){console.warn('Backstage crew identity-link list unavailable',error);}
+   let profileId=null;
+   try{
+    const {data:resolved,error}=await supabaseClient.rpc('backstage_current_crew_profile',{p_require_director:false});
+    if(error)throw error;
+    profileId=typeof resolved==='string'?resolved:(resolved?.crew_profile_id||resolved?.profile_id||resolved?.id||null);
+   }catch(error){console.warn('Crew profile RPC unavailable; using direct Auth ID fallback',error);}
+   const profile=(data.users||[]).find(u=>profileId&&String(u.id)===String(profileId))
+    ||(data.users||[]).find(u=>String(u.authUserId||'')===String(activeAuth));
+   if(profile){
+    resolvedAuthId=activeAuth;
+    resolvedProfileId=String(profile.id);
+    localStorage.setItem('regency_current_user',resolvedProfileId);
+   }else{
+    resolvedAuthId=activeAuth;
+    resolvedProfileId='';
+    localStorage.removeItem('regency_current_user');
+   }
+   const craig=(data.users||[]).find(u=>String(u.id)===CRAIG_ID);
+   if(craig&&activeAuth===CRAIG_AUTH_ID){
+    if(craig.role!=='seniorCrew'){craig.role='seniorCrew';changed=true;}
+    if(craig.systemAdmin!==true){craig.systemAdmin=true;changed=true;}
+    if(Object.prototype.hasOwnProperty.call(craig,'cloudOnly')){delete craig.cloudOnly;changed=true;}
+   }
+   if(typeof normalizeDataShape==='function')normalizeDataShape();
+   if(craig&&activeAuth===CRAIG_AUTH_ID&&Object.prototype.hasOwnProperty.call(craig,'cloudOnly'))delete craig.cloudOnly;
+   localStorage.removeItem('regency_current_auth_user');
+   if(typeof persistMainData==='function')persistMainData();
+   lastUsersKey=usersKey();
+   if(changed&&typeof cloudVersion!=='undefined'&&cloudVersion&&typeof scheduleCloudPush==='function')scheduleCloudPush();
+  }finally{resolving=false;}
+ };
+
+ const originalCloudLoad=window.cloudLoad;
+ if(typeof originalCloudLoad==='function'&&!originalCloudLoad.__v178){
+  const wrapped=async function(){
+   const result=await originalCloudLoad.apply(this,arguments);
+   await window.ensureCloudCrew();
+   return result;
+  };
+  wrapped.__v178=true;window.cloudLoad=wrapped;
+ }
+ const originalDownload=window.cloudDownloadFromCloud;
+ if(typeof originalDownload==='function'&&!originalDownload.__v178){
+  const wrapped=async function(){
+   const result=await originalDownload.apply(this,arguments);
+   await window.ensureCloudCrew();
+   if(typeof render==='function')render();
+   return result;
+  };
+  wrapped.__v178=true;window.cloudDownloadFromCloud=wrapped;
+ }
+ const originalRender=window.render;
+ if(typeof originalRender==='function'&&!originalRender.__v178){
+  const wrapped=function(){
+   const result=originalRender.apply(this,arguments);
+   const key=usersKey();
+   if(authId()&&typeof cloudVersion!=='undefined'&&cloudVersion&&key!==lastUsersKey&&!resolving){
+    Promise.resolve().then(async()=>{
+     await window.ensureCloudCrew();
+     if(typeof render==='function')originalRender.apply(window,arguments);
+    }).catch(error=>console.warn('Post-sync crew identity resolution failed',error));
+   }
+   return result;
+  };
+  wrapped.__v178=true;window.render=wrapped;
+ }
+ // The initial cloud load may have completed before this additive script was evaluated.
+ if(authId()&&typeof cloudVersion!=='undefined'&&cloudVersion){
+  Promise.resolve().then(()=>window.ensureCloudCrew()).then(()=>{if(typeof render==='function')render();})
+   .catch(error=>console.warn('Initial crew identity resolution failed',error));
+ }
+ console.info('Backstage V71.78 crew identity resolution loaded');
+})();
