@@ -4,6 +4,9 @@
  if(window.__customerDocumentsBV179)return;
  window.__customerDocumentsBV179=true;
  let documentsMode=false;
+ let backendAgreements=[];
+ let loadedCustomerId='';
+ let agreementLoadPromise=null;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const currentCustomer=()=>{
   const active=document.querySelector('#customers .cust-person.active');
@@ -32,8 +35,31 @@
     }
    }
   });
+  (backendAgreements||[]).forEach(a=>{
+   const virtualId='backend-hire-agreement:'+String(a.id);
+   if(seen.has(virtualId))return;
+   seen.add(virtualId);
+   out.push({id:virtualId,name:'Hire Agreement - '+String(a.reference||a.vehicleName||'Signed agreement')+'.pdf',type:'application/pdf',createdAt:a.createdAt||'',cloudPath:a.pdfPath||'',storageBucket:'hire-agreements',cloudOnly:true,_linkedBooking:{id:a.bookingId,displayRef:a.bookingRef||a.bookingId},_backendAgreement:true});
+  });
   return out.sort((a,b)=>String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
  };
+ async function loadBackendAgreements(){
+  const c=currentCustomer();if(!c||typeof supabaseClient==='undefined'||!supabaseClient)return;
+  const customerId=String(c.id||'');
+  if(loadedCustomerId===customerId&&agreementLoadPromise)return agreementLoadPromise;
+  loadedCustomerId=customerId;
+  const email=String(c.email||c.contactEmail||'').trim().toLowerCase();
+  const name=String(c.name||'').trim();
+  if(!email&&!name){backendAgreements=[];return;}
+  agreementLoadPromise=(async()=>{
+   const result=await supabaseClient.functions.invoke('hire-agreement',{body:{action:'list_customer_agreements',customerEmail:email,customerName:name}});
+   if(result.error)throw result.error;
+   if(result.data?.error)throw new Error(result.data.error);
+   backendAgreements=Array.isArray(result.data?.agreements)?result.data.agreements:[];
+   if(documentsMode&&currentCustomer()?.id===c.id)renderDocuments();
+  })().catch(err=>{console.error('Could not load signed customer agreements',err);});
+  return agreementLoadPromise;
+ }
  function renderDocuments(){
   const host=document.querySelector('#customers .cust-content'),c=currentCustomer();
   if(!host||!c)return;
@@ -49,7 +75,7 @@
  function injectTab(){
   const nav=document.querySelector('#customers .cust-tabs');if(!nav||nav.querySelector('[data-customer-documents-tab]'))return;
   const button=document.createElement('button');button.type='button';button.className='cust-tab';button.textContent='Documents';button.dataset.customerDocumentsTab='1';
-  button.addEventListener('click',()=>{documentsMode=true;nav.querySelectorAll('.cust-tab').forEach(x=>x.classList.toggle('active',x===button));renderDocuments();});
+  button.addEventListener('click',()=>{documentsMode=true;loadedCustomerId='';backendAgreements=[];nav.querySelectorAll('.cust-tab').forEach(x=>x.classList.toggle('active',x===button));renderDocuments();loadBackendAgreements();});
   const bookings=Array.from(nav.querySelectorAll('.cust-tab')).find(x=>x.textContent.trim()==='Bookings');
   if(bookings)bookings.insertAdjacentElement('afterend',button);else nav.appendChild(button);
  }
