@@ -254,6 +254,7 @@
  let linkedProfiles=new Set();
  let activeAuthId='';
  let activeProfileId='';
+ let blockedAuthId='';
  let resolvingIdentity=false;
 
  function signedInAuthId(){
@@ -266,6 +267,7 @@
  window.currentUser=function(){
   const auth=signedInAuthId();
   if(auth){
+   if(activeAuthId===auth&&blockedAuthId===auth)return null;
    if(activeAuthId===auth&&activeProfileId){
     const profile=findProfile(activeProfileId);
     if(profile){profile.role=normalizeRole(profile.role);return profile;}
@@ -329,6 +331,7 @@
     profile=(data.users||[]).find(u=>String(u.authUserId||'')===String(auth))||null;
    }
    activeAuthId=auth;
+   blockedAuthId=ambiguous?auth:'';
    activeProfileId=profile?String(profile.id):'';
    if(profile)localStorage.setItem('regency_current_user',activeProfileId);
    else localStorage.removeItem('regency_current_user');
