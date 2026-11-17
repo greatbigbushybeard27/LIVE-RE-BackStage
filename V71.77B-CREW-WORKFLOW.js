@@ -245,3 +245,128 @@
  }
  console.info('Backstage V71.78 crew identity resolution loaded');
 })();
+
+/* V71.79: resolve the signed-in account through its active identity-link row first.
+   This avoids relying on the RPC being available and prevents cloud-only filtering
+   from hiding profiles that have an active company identity link. */
+(function(){
+ 'use strict';
+ let linkedProfiles=new Set();
+ let activeAuthId='';
+ let activeProfileId='';
+ let resolvingIdentity=false;
+
+ function signedInAuthId(){
+  try{return typeof cloudSession!=='undefined'?(cloudSession?.user?.id||''):'';}catch(e){return '';}
+ }
+ function findProfile(id){
+  return (typeof data!=='undefined'&&Array.isArray(data.users))
+   ?data.users.find(u=>String(u.id)===String(id)):null;
+ }
+ window.currentUser=function(){
+  const auth=signedInAuthId();
+  if(auth){
+   if(activeAuthId===auth&&activeProfileId){
+    const profile=findProfile(activeProfileId);
+    if(profile){profile.role=normalizeRole(profile.role);return profile;}
+   }
+   const direct=(data.users||[]).find(u=>String(u.authUserId||'')===String(auth));
+   if(direct){direct.role=normalizeRole(direct.role);return direct;}
+   return null;
+  }
+  const id=localStorage.getItem('regency_current_user');
+  const local=id?findProfile(id):null;
+  if(local)local.role=normalizeRole(local.role);
+  return local||null;
+ };
+ window.crewUsers=function(){
+  return (data.users||[]).filter(u=>!u.cloudOnly||!!u.authUserId||linkedProfiles.has(String(u.id)));
+ };
+ window.isSystemAdministrator=function(){return window.currentUser()?.systemAdmin===true;};
+ window.isDirector=function(){
+  return normalizeRole(window.currentUser()?.role)==='director'||window.isSystemAdministrator();
+ };
+ window.ensureCloudCrew=async function(){
+  const auth=signedInAuthId();
+  if(!auth||typeof supabaseClient==='undefined'||!supabaseClient||resolvingIdentity)return;
+  resolvingIdentity=true;
+  try{
+   const mergeChanged=typeof window.applyCraigCloudIdentityMerge==='function'
+    ?!!window.applyCraigCloudIdentityMerge(data):false;
+   let links=[];
+   try{
+    const result=await supabaseClient.from('backstage_crew_identity_links')
+     .select('crew_profile_id,auth_user_id')
+     .eq('org_id','regency-events').eq('is_active',true);
+    if(result.error)throw result.error;
+    links=Array.isArray(result.data)?result.data:[];
+    linkedProfiles=new Set(links.map(x=>String(x.crew_profile_id)));
+   }catch(error){
+    console.warn('Backstage active crew identity links could not be loaded',error);
+   }
+
+   const matches=links.filter(x=>String(x.auth_user_id)===String(auth));
+   let profileId=null;
+   let ambiguous=false;
+   if(matches.length===1)profileId=matches[0].crew_profile_id;
+   else if(matches.length>1){
+    ambiguous=true;
+    console.error('More than one active crew profile is linked to this Auth account. Profile selection has been stopped to protect identity records.');
+   }
+
+   if(!profileId&&!ambiguous){
+    try{
+     const {data:resolved,error}=await supabaseClient.rpc('backstage_current_crew_profile',{p_require_director:false});
+     if(error)throw error;
+     profileId=typeof resolved==='string'?resolved:(resolved?.crew_profile_id||resolved?.profile_id||resolved?.id||null);
+    }catch(error){
+     console.warn('Crew profile resolver RPC unavailable; using direct Auth ID fallback',error);
+    }
+   }
+
+   let profile=profileId?findProfile(profileId):null;
+   if(!profile&&!profileId&&!ambiguous){
+    profile=(data.users||[]).find(u=>String(u.authUserId||'')===String(auth))||null;
+   }
+   activeAuthId=auth;
+   activeProfileId=profile?String(profile.id):'';
+   if(profile)localStorage.setItem('regency_current_user',activeProfileId);
+   else localStorage.removeItem('regency_current_user');
+
+   if(typeof normalizeDataShape==='function')normalizeDataShape();
+   localStorage.removeItem('regency_current_auth_user');
+   if(mergeChanged&&typeof persistMainData==='function'){
+    persistMainData();
+    if(typeof cloudVersion!=='undefined'&&cloudVersion&&typeof scheduleCloudPush==='function')scheduleCloudPush();
+   }
+  }finally{resolvingIdentity=false;}
+ };
+
+ const priorCloudLoad=window.cloudLoad;
+ if(typeof priorCloudLoad==='function'&&!priorCloudLoad.__v179){
+  const wrapped=async function(){
+   const result=await priorCloudLoad.apply(this,arguments);
+   await window.ensureCloudCrew();
+   if(typeof render==='function')render();
+   return result;
+  };
+  wrapped.__v179=true;
+  window.cloudLoad=wrapped;
+ }
+ const priorDownload=window.cloudDownloadFromCloud;
+ if(typeof priorDownload==='function'&&!priorDownload.__v179){
+  const wrapped=async function(){
+   const result=await priorDownload.apply(this,arguments);
+   await window.ensureCloudCrew();
+   if(typeof render==='function')render();
+   return result;
+  };
+  wrapped.__v179=true;
+  window.cloudDownloadFromCloud=wrapped;
+ }
+ if(signedInAuthId()&&typeof cloudVersion!=='undefined'&&cloudVersion){
+  Promise.resolve().then(()=>window.ensureCloudCrew()).then(()=>{if(typeof render==='function')render();})
+   .catch(error=>console.warn('V71.79 initial crew identity resolution failed',error));
+ }
+ console.info('Backstage V71.79 active identity-link resolution loaded');
+})();
