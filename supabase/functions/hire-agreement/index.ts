@@ -124,6 +124,8 @@ Deno.serve(async(req)=>{
    const {data:fileData,error:fileErr}=await admin.storage.from("hire-agreements").download(agreement.pdf_path);
    if(fileErr||!fileData)throw fileErr||new Error("The signed PDF could not be retrieved.");
    const pdfBytes=new Uint8Array(await fileData.arrayBuffer());
+   const emailPdfHash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",pdfBytes))).map(x=>x.toString(16).padStart(2,"0")).join("");
+   if(agreement.pdf_sha256&&emailPdfHash!==agreement.pdf_sha256)return json(req,{error:"The stored signed PDF failed its integrity check. No copy was sent.",integrity:"failed",reference:agreement.reference},409);
    let binary="";for(let i=0;i<pdfBytes.length;i+=0x8000)binary+=String.fromCharCode(...pdfBytes.subarray(i,i+0x8000));
    const pdfBase64=btoa(binary);
    const customer=agreement.customer_details||{};
