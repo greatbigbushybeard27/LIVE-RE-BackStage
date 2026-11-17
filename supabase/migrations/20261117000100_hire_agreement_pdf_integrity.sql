@@ -16,26 +16,25 @@ begin
     return old;
   end if;
 
-  if old.status = 'signed' then
-    if new.booking_id is distinct from old.booking_id
-      or new.template_key is distinct from old.template_key
-      or new.template_version is distinct from old.template_version
-      or new.token_hash is distinct from old.token_hash
-      or new.booking_snapshot is distinct from old.booking_snapshot
-      or new.terms_snapshot is distinct from old.terms_snapshot
-      or new.customer_details is distinct from old.customer_details
-      or new.accepted is distinct from old.accepted
-      or new.signature_path is distinct from old.signature_path
-      or new.pdf_path is distinct from old.pdf_path
-      or new.pdf_sha256 is distinct from old.pdf_sha256
-      or new.pdf_size_bytes is distinct from old.pdf_size_bytes
-      or new.reference is distinct from old.reference
-      or new.signed_at is distinct from old.signed_at
-      or new.ip_address is distinct from old.ip_address
-      or new.user_agent is distinct from old.user_agent
-      or new.status is distinct from old.status then
-      raise exception 'Signed hire agreement content and signature metadata are immutable.';
-    end if;
+  if old.status = 'signed'
+    and (to_jsonb(new) - array[
+      'customer_email_status',
+      'company_email_status',
+      'customer_email_id',
+      'company_email_id',
+      'email_last_error',
+      'email_last_attempt_at',
+      'email_sent_at'
+    ]) is distinct from (to_jsonb(old) - array[
+      'customer_email_status',
+      'company_email_status',
+      'customer_email_id',
+      'company_email_id',
+      'email_last_error',
+      'email_last_attempt_at',
+      'email_sent_at'
+    ]) then
+    raise exception 'Signed hire agreement content, PDF, signature and audit metadata are immutable.';
   end if;
   return new;
 end;
