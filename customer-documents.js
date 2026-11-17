@@ -69,10 +69,11 @@
    const bookingId=String(doc._linkedBooking?.id||'');
    if(!bookingId)throw new Error('The hire booking link is missing.');
    // Rebuild the signed PDF from its saved agreement and signature, then issue a fresh secure URL.
-   const result=await supabaseClient.functions.invoke('hire-agreement',{body:{action:'repair_pdf',bookingId}});
+   const result=await supabaseClient.functions.invoke('hire-agreement',{body:{action:'get_pdf',bookingId}});
    if(result.error)throw result.error;
    if(result.data?.error)throw new Error(result.data.error);
-   if(!result.data?.pdfUrl)throw new Error('The agreement service did not return a PDF link.');
+   if(!result.data?.pdfUrl)throw new Error('The agreement service did not return the stored PDF link.');
+   if(result.data.integrity==='legacy_unverified')console.warn('This older signed agreement predates PDF integrity hashes. The stored PDF is being shown without reconstruction.');
    if(tab)tab.location.href=result.data.pdfUrl;else window.location.href=result.data.pdfUrl;
   }catch(err){if(tab)tab.close();console.error('Could not open signed hire agreement',err);alert('Could not open this agreement: '+(err?.message||err));}
  };
