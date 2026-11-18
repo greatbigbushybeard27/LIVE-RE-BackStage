@@ -39,10 +39,10 @@ self.addEventListener('activate', event => {
 function addBackstageScripts(html) {
   const scripts = [];
   if (!html.includes('equipment-profiles.js')) {
-    scripts.push('<script src="./equipment-profiles.js?v=pwa-recovery-2"></script>');
+    scripts.push('<script src="./equipment-profiles.js"></script>');
   }
   if (!html.includes('customer-documents.js')) {
-    scripts.push('<script src="./customer-documents.js?v=pwa-recovery-2"></script>');
+    scripts.push('<script src="./customer-documents.js"></script>');
   }
   const diagnostic = `<script>
   (function(){
@@ -59,7 +59,7 @@ function addBackstageScripts(html) {
   })();
   </script>`;
   const instrumented = html.replace(/<head([^>]*)>/i, (match) => match + diagnostic);
-  return instrumented.replace(/<\/body>/i, scripts.join('\\n') + '\\n</body>');
+  return instrumented.replace(/<\/body>/i, scripts.join('\n') + '\n</body>');
 }
 
 self.addEventListener('fetch', event => {
