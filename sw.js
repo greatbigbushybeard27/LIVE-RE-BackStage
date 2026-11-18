@@ -4,7 +4,6 @@
  */
 const CACHE_NAME = 'backstage-pwa-recovery-v2';
 const CORE = [
-  './',
   './V71.77B-CREW-WORKFLOW.js',
   './customer-documents.js',
   './equipment-profiles.js',
@@ -59,7 +58,8 @@ function addBackstageScripts(html) {
     window.addEventListener('unhandledrejection',function(e){var r=e.reason;show(r&&r.message?r.message:String(r||'Unhandled promise rejection'));});
   })();
   </script>`;
-  return html.replace(/<\/body>/i, scripts.join('\\n') + diagnostic + '\\n</body>');
+  const instrumented = html.replace(/<head([^>]*)>/i, (match) => match + diagnostic);
+  return instrumented.replace(/<\/body>/i, scripts.join('\\n') + '\\n</body>');
 }
 
 self.addEventListener('fetch', event => {
