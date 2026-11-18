@@ -59,7 +59,7 @@ function addBackstageScripts(html) {
     window.addEventListener('unhandledrejection',function(e){var r=e.reason;show(r&&r.message?r.message:String(r||'Unhandled promise rejection'));});
   })();
   </script>`;
-  return html.replace(/<\\/body>/i, scripts.join('\\n') + diagnostic + '\\n</body>');
+  return html.replace(/<\/body>/i, scripts.join('\\n') + diagnostic + '\\n</body>');
 }
 
 self.addEventListener('fetch', event => {
