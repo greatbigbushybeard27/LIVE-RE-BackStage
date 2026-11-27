@@ -12,8 +12,8 @@ export default async (request, context) => {
   if (!html.includes("equipment-profiles.js")) {
     scripts.push('<script src="/equipment-profiles.js?v=1"></script>');
   }
-  if (!html.includes("timesheet-period-fix-v2.js")) {
-    scripts.push('<script src="/timesheet-period-fix-v2.js?v=2"></script>');
+  if (!html.includes("timesheet-period-fix-v3.js")) {
+    scripts.push('<script src="/timesheet-period-fix-v3.js?v=3"></script>');
   }
   if (!scripts.length) return new Response(html, { status: response.status, headers });
 
