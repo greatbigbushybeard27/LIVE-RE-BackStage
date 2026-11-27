@@ -69,7 +69,7 @@
      const segments=Array.isArray(x.segments)&&x.segments.length?x.segments:[{start:x.start,finish:x.finish,rateType:x.rateType||'standard',rateSnapshot:hourRateForEntry(x)}];
      if(x.work==='Day Off'){output.push({Crew:u.name,Date:x.date,Work:hourWorkLabel(x),Start:'',Finish:'',Rate:'',HourlyRate:0,Hours:0,Gross:0,Status:x.status});return;}
      segments.forEach(s=>{
-       const mins=minutesBetweenTimes(s.start,s.finish),rate=Number(s.rateSnapshot)||hourRateForEntry({...x,rateType:s.rateType});
+       const mins=minutesForHourEntry({...x,start:s.start,finish:s.finish}),rate=Number(s.rateSnapshot)||hourRateForEntry({...x,rateType:s.rateType});
        output.push({Crew:u.name,Date:x.date,Work:hourWorkLabel(x),Start:s.start||'',Finish:s.finish||'',Rate:hourRateTypeLabel(s.rateType||'standard'),HourlyRate:Number(rate.toFixed(2)),Hours:Number((mins/60).toFixed(2)),Gross:Number((mins/60*rate).toFixed(2)),Status:x.status});
      });
    });
