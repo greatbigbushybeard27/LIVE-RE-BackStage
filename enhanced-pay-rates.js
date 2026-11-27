@@ -153,8 +153,27 @@
  };
  function downloadRows(rows,filename){
   if(!rows.length)return alert('No hours to export for this pay period.');
-  if(window.XLSX){const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Timesheet');XLSX.writeFile(wb,filename+'.xlsx')}
-  else{const csv=[Object.keys(rows[0]).join(','),...rows.map(function(r){return Object.values(r).map(function(v){return '"'+String(v).replaceAll('"','""')+'"'}).join(',')})].join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=filename+'.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+  const dailyMap={},monthMap={};
+  rows.forEach(function(r){
+   const dk=r.Crew+'|'+r.Date,mk=r.Crew+'|'+String(r.Date||'').slice(0,7);
+   if(!dailyMap[dk])dailyMap[dk]={Crew:r.Crew,Date:r.Date,DailyTotal:0,Hours:0};
+   dailyMap[dk].DailyTotal+=Number(r.Gross)||0;dailyMap[dk].Hours+=Number(r.Hours)||0;
+   if(!monthMap[mk])monthMap[mk]={Crew:r.Crew,Month:String(r.Date||'').slice(0,7),MonthlyTotal:0,Hours:0};
+   monthMap[mk].MonthlyTotal+=Number(r.Gross)||0;monthMap[mk].Hours+=Number(r.Hours)||0;
+  });
+  const daily=Object.values(dailyMap).map(function(x){x.DailyTotal=Number(x.DailyTotal.toFixed(2));x.Hours=Number(x.Hours.toFixed(2));return x}).sort(function(a,b){return a.Date.localeCompare(b.Date)||a.Crew.localeCompare(b.Crew)});
+  const monthly=Object.values(monthMap).map(function(x){x.MonthlyTotal=Number(x.MonthlyTotal.toFixed(2));x.Hours=Number(x.Hours.toFixed(2));return x}).sort(function(a,b){return a.Month.localeCompare(b.Month)||a.Crew.localeCompare(b.Crew)});
+  rows.forEach(function(r){r.DailyTotal=dailyMap[r.Crew+'|'+r.Date].DailyTotal;r.MonthlyTotal=monthMap[r.Crew+'|'+String(r.Date||'').slice(0,7)].MonthlyTotal});
+  if(window.XLSX){
+   const wb=XLSX.utils.book_new();
+   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Timesheet');
+   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(daily),'Daily Totals');
+   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(monthly),'Monthly Totals');
+   XLSX.writeFile(wb,filename+'.xlsx');
+  }else{
+   const csv=[Object.keys(rows[0]).join(','),...rows.map(function(r){return Object.values(r).map(function(v){return '"'+String(v).replaceAll('"','""')+'"'}).join(',')})].join('\n');
+   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=filename+'.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)
+  }
  }
  window.exportHoursExcel=function(uid){
   const p=currentPayPeriod(),people=uid?[data.users.find(function(u){return u.id===uid})].filter(Boolean):(data.users||[]).filter(function(u){return !u.cloudOnly});
