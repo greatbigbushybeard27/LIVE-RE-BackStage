@@ -104,8 +104,10 @@
  const oldSaveHour=window.saveHourEntry;
  if(typeof oldSaveHour==='function'){
   window.saveHourEntry=function(id){
+   const user=currentUser(),date=byId('h_date')&&byId('h_date').value;
    const result=oldSaveHour.apply(this,arguments);
-   const row=(data.hours||[]).find(function(x){return String(x.id)===String(id||'')});
+   let row=id?(data.hours||[]).find(function(x){return String(x.id)===String(id)}):null;
+   if(!row&&user&&date)row=(data.hours||[]).filter(function(x){return x.userId===user.id&&x.date===date}).sort(function(a,b){return String(b.createdAt||'').localeCompare(String(a.createdAt||''))})[0];
    if(row&&Array.isArray(row.segments)){row.segments.forEach(function(s){s.rateLabelSnapshot=hourRateTypeLabel(s.rateType)});row.rateLabelSnapshot=row.segments[0]?row.segments[0].rateLabelSnapshot:hourRateTypeLabel(row.rateType);save()}
    return result;
   };
