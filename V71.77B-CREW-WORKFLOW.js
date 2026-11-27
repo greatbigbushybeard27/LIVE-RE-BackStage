@@ -373,3 +373,97 @@
  }
  console.info('Backstage V71.79 active identity-link resolution loaded');
 })();
+
+
+/* Main Backstage app: 27th–26th payday close-out, historical editing and export. */
+(function(){
+ 'use strict';
+ const originalTimesheet=window.hoursTimesheetHtml;
+ const originalAdd=window.addHourEntry;
+ const originalSave=window.saveHourEntry;
+ if(typeof originalTimesheet!=='function'||typeof originalAdd!=='function'||typeof originalSave!=='function'){
+   console.error('Backstage payday workflow: expected main-app timesheet functions were not found.');
+   return;
+ }
+ const selectedPeriod=()=>window.backstageSelectedPayPeriod||currentPayPeriod();
+ const periodRows=(u,p)=>(data.hours||[]).filter(x=>x.userId===u.id&&x.date>=p.start&&x.date<=p.end);
+ const isSubmitted=rows=>rows.length>0&&rows.every(x=>x.status==='Submitted');
+ const isHoursPageVisible=()=>{const el=document.getElementById('hours');return !!el&&!el.classList.contains('hidden')};
+
+ window.hoursTimesheetHtml=function(u,p,isPrevious=false){
+   const rows=periodRows(u,p),locked=isSubmitted(rows);
+   let html=originalTimesheet.call(this,u,p,isPrevious);
+   const oldActions='<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button></div>';
+   let actions;
+   if(locked){
+     actions='<div class="actions timesheet-top-actions"><span class="small muted">This timesheet has been submitted and is locked.</span><button class="secondary" onclick="exportSelectedHoursExcel()">📥 Export Excel</button></div>';
+   }else{
+     actions='<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button>'+(rows.length?'<button class="secondary" onclick="exportSelectedHoursExcel()">📥 Export Excel</button>':'')+'</div>';
+   }
+   if(html.includes(oldActions))html=html.replace(oldActions,actions);
+   else if(!html.includes('exportSelectedHoursExcel'))html=html.replace('<div class="timesheet-list">',actions+'<div class="timesheet-list">');
+   if(rows.length&&!locked&&!html.includes('onclick="submitHoursPeriod()"')){
+     html+='<div class="timesheet-submit"><button class="green" style="width:100%" onclick="submitHoursPeriod()">Confirm &amp; Submit Pay Period</button><div class="small muted">Check all shifts, including the 26th. Submission locks this selected pay period.</div></div>';
+   }
+   return html;
+ };
+
+ window.addHourEntry=function(existingId,presetDate){
+   const u=currentUser();if(!u)return showLoginOverlay();
+   const p=selectedPeriod(),historical=isHoursPageVisible()&&p.key!==currentPayPeriod().key;
+   const rows=periodRows(u,p),locked=isSubmitted(rows);
+   if(historical&&locked&&!existingId)return alert('This pay period has already been submitted and is locked.');
+   const date=presetDate||(historical?p.end:undefined);
+   return originalAdd.call(this,existingId,date);
+ };
+
+ window.saveHourEntry=function(id){
+   const u=currentUser();if(!u)return;
+   const p=selectedPeriod(),historical=isHoursPageVisible()&&p.key!==currentPayPeriod().key;
+   const date=document.getElementById('h_date')?.value;
+   if(historical&&date&&(date<p.start||date>p.end))return alert('This timesheet covers '+p.start+' to '+p.end+'. Please choose a date within this pay period.');
+   if(historical){
+     const previousOpen=window.openHoursTracker;
+     window.openHoursTracker=function(){window.backstageSelectedPayPeriod=p;showPage('hours');renderHoursPage(u,p,true);};
+     try{return originalSave.call(this,id);}
+     finally{window.openHoursTracker=previousOpen;}
+   }
+   return originalSave.call(this,id);
+ };
+
+ window.exportSelectedHoursExcel=function(){
+   const u=currentUser();if(!u)return showLoginOverlay();
+   const p=selectedPeriod(),rows=periodRows(u,p).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+   if(!rows.length)return alert('No hours to export for this pay period.');
+   const output=rows.map(x=>{
+     const segments=Array.isArray(x.segments)&&x.segments.length?x.segments:[];
+     const ratePeriods=segments.length?segments.map(s=>`${s.start||''}–${s.finish||''} ${hourRateTypeLabel(s.rateType||'standard')}`).join(' | '):hourRateTypeLabel(x.rateType||'standard');
+     return {Crew:u.name,Date:x.date,Work:hourWorkLabel(x),RatePeriods:ratePeriods,Start:x.start||'',Finish:x.finish||'',Hours:Number((minutesForHourEntry(x)/60).toFixed(2)),Gross:Number(wageForEntry(x).toFixed(2)),Status:x.status||'Draft'};
+   });
+   const filename=`Regency_Timesheet_${p.start}_to_${p.end}`;
+   if(window.XLSX){
+     const ws=XLSX.utils.json_to_sheet(output),wb=XLSX.utils.book_new();
+     XLSX.utils.book_append_sheet(wb,ws,'Timesheet');XLSX.writeFile(wb,filename+'.xlsx');
+   }else{
+     const csv=[Object.keys(output[0]).join(','),...output.map(r=>Object.values(r).map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\\n');
+     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=filename+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+   }
+ };
+
+ window.submitHoursPeriod=function(){
+   const u=currentUser();if(!u)return showLoginOverlay();
+   const p=selectedPeriod(),all=periodRows(u,p),pending=all.filter(x=>x.status!=='Submitted');
+   if(!pending.length)return alert('There are no unsubmitted hours in this pay period.');
+   openModal(`<h2>Confirm and submit timesheet?</h2><p>You are submitting <b>${p.start}</b> to <b>${p.end}</b>.</p><div class="profile-stat"><span>Unsubmitted entries</span><b>${pending.length}</b></div><div class="profile-stat"><span>Total period hours</span><b>${formatHours(all.reduce((n,x)=>n+minutesForHourEntry(x),0))}</b></div><p class="muted">Please check that the 26th has been added and all shifts are correct. Once submitted, these entries are locked.</p><div class="actions"><button class="secondary" onclick="closeModal();renderHoursPage(currentUser(),window.backstageSelectedPayPeriod,window.backstageSelectedPayPeriod.key!==currentPayPeriod().key)">Go Back</button><button class="green" onclick="confirmSubmitHoursPeriod()">Yes, confirm and submit</button></div>`);
+ };
+
+ window.confirmSubmitHoursPeriod=function(){
+   const u=currentUser();if(!u)return showLoginOverlay();
+   const p=selectedPeriod(),pending=periodRows(u,p).filter(x=>x.status!=='Submitted');
+   if(!pending.length)return alert('There are no unsubmitted hours in this pay period.');
+   const at=new Date().toISOString();pending.forEach(x=>{x.status='Submitted';x.submittedAt=at;});
+   save();logActivity({itemName:u.name,action:'Hours submitted',at,details:`Pay period ${p.start} to ${p.end}`});save();
+   closeModal();window.backstageSelectedPayPeriod=p;renderHoursPage(u,p,p.key!==currentPayPeriod().key);
+   openModal(`<h2>✅ Timesheet submitted</h2><p>Your timesheet for <b>${p.start}</b> to <b>${p.end}</b> has been submitted successfully.</p><p class="muted">These entries are now locked. Your next pay period starts on the 27th.</p><button class="green" style="width:100%" onclick="closeModal()">Return to timesheet</button>`);
+ };
+})();
