@@ -2,12 +2,12 @@
  * Network-first while online, cached fallback offline, and scoped cache cleanup.
  * Adds visible startup diagnostics so standalone-app failures are not silently black.
  */
-const CACHE_NAME = 'backstage-pwa-recovery-v3';
+const CACHE_NAME = 'backstage-pwa-recovery-v4';
 const CORE = [
   './V71.77B-CREW-WORKFLOW.js',
   './customer-documents.js',
   './equipment-profiles.js',
-  './timesheet-period-fix-v2.js',
+  './timesheet-period-fix-v3.js',
   './manifest.webmanifest',
   './casual-induction.html',
   './regency-banner.png',
@@ -45,8 +45,8 @@ function addBackstageScripts(html) {
   if (!html.includes('customer-documents.js')) {
     scripts.push('<script src="./customer-documents.js"></script>');
   }
-  if (!html.includes('timesheet-period-fix-v2.js')) {
-    scripts.push('<script src="./timesheet-period-fix-v2.js?v=2"></script>');
+  if (!html.includes('timesheet-period-fix-v3.js')) {
+    scripts.push('<script src="./timesheet-period-fix-v3.js?v=3"></script>');
   }
   const diagnostic = `<script>
   (function(){
