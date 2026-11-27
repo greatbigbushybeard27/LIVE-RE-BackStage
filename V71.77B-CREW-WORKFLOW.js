@@ -445,7 +445,7 @@
      const ws=XLSX.utils.json_to_sheet(output),wb=XLSX.utils.book_new();
      XLSX.utils.book_append_sheet(wb,ws,'Timesheet');XLSX.writeFile(wb,filename+'.xlsx');
    }else{
-     const csv=[Object.keys(output[0]).join(','),...output.map(r=>Object.values(r).map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\\n');
+     const csv=[Object.keys(output[0]).join(','),...output.map(r=>Object.values(r).map(v=>`"${String(v).replaceAll('"','""')}"`).join(','))].join('\n');
      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=filename+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
    }
  };
