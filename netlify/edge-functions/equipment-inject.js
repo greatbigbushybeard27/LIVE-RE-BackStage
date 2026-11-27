@@ -8,13 +8,15 @@ export default async (request, context) => {
   headers.delete("content-length");
   headers.delete("content-encoding");
 
-  if (html.includes("equipment-profiles.js")) {
-    return new Response(html, { status: response.status, headers });
+  const scripts = [];
+  if (!html.includes("equipment-profiles.js")) {
+    scripts.push('<script src="/equipment-profiles.js?v=1"></script>');
   }
+  if (!html.includes("timesheet-period-fix.js")) {
+    scripts.push('<script src="/timesheet-period-fix.js?v=1"></script>');
+  }
+  if (!scripts.length) return new Response(html, { status: response.status, headers });
 
-  const injected = html.replace(
-    /<\/body>/i,
-    '<script src="/equipment-profiles.js?v=1"></script>\n</body>'
-  );
+  const injected = html.replace(/<\/body>/i, scripts.join("\n") + "\n</body>");
   return new Response(injected, { status: response.status, headers });
 };
