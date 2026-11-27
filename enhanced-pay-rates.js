@@ -135,7 +135,7 @@
     if(segments){
      segments.forEach(function(s){
       const mins=Number(s.minutes!=null?s.minutes:minutesBetweenTimes(s.start,s.finish)),hours=Number((mins/60).toFixed(2)),rate=Number(Number(s.rateSnapshot!=null?s.rateSnapshot:wageRateFor(u,s.rateType)).toFixed(2));
-      rows.push({Crew:u.name,Date:x.date,Work:hourWorkLabel(x),Shift:(s.start||'')+'–'+(s.finish||''),RateType:s.rateLabelSnapshot||hourRateTypeLabel(s.rateType),HourlyRate:rate,Hours:hours,Gross:Number((hours*rate).toFixed(2)),Status:x.status||'Draft'});
+      rows.push({Crew:u.name,Date:x.date,Work:hourWorkLabel(x),Shift:(s.start||'')+'–'+(s.finish||''),RateType:s.rateLabelSnapshot||hourRateTypeLabel(s.rateType),HourlyRate:rate,Hours:hours,Gross:Number((mins/60*rate).toFixed(2)),Status:x.status||'Draft'});
      });
     }else{
      const hours=Number((minutesForHourEntry(x)/60).toFixed(2)),rate=Number(hourRateForEntry(x).toFixed(2));
@@ -145,6 +145,12 @@
   });
   return rows;
  }
+ window.paySummary=function(u,p){
+  const rows=(data.hours||[]).filter(function(x){return x.userId===u.id&&x.date>=p.start&&x.date<=p.end});
+  const gross=rows.reduce(function(a,x){return a+wageForEntry(x)},0),taxPercent=Math.max(0,Math.min(100,Number(settings(u).taxPercent)||0)),tax=gross*taxPercent/100;
+  const overtimeMinutes=rows.reduce(function(a,x){const segs=Array.isArray(x.segments)&&x.segments.length?x.segments:null;if(segs)return a+segs.filter(function(s){return s.rateType!=='standard'}).reduce(function(n,s){return n+minutesBetweenTimes(s.start,s.finish)},0);return a+(x.rateType&&x.rateType!=='standard'?minutesForHourEntry(x):0)},0);
+  return {rows:rows,gross:gross,tax:tax,taxPercent:taxPercent,net:Math.max(0,gross-tax),minutes:rows.reduce(function(a,x){return a+minutesForHourEntry(x)},0),overtimeMinutes:overtimeMinutes};
+ };
  function downloadRows(rows,filename){
   if(!rows.length)return alert('No hours to export for this pay period.');
   if(window.XLSX){const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Timesheet');XLSX.writeFile(wb,filename+'.xlsx')}
