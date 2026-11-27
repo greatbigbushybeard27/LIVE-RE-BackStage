@@ -14,8 +14,8 @@
  window.hoursTimesheetHtml=function(u,p,isPrevious){
    const rows=rowsFor(u,p),locked=fullySubmitted(rows);
    // A previous period remains editable until every entry has been submitted.
-   const historicalButEditable=!!isPrevious&&!locked;
-   let html=originalHtml.call(this,u,p,!historicalButEditable&&!!isPrevious);
+   const showAsSubmittedHistory=!!isPrevious&&locked;
+   let html=originalHtml.call(this,u,p,showAsSubmittedHistory);
    const add='<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button></div>';
    const controls='<div class="actions timesheet-top-actions"><button onclick="addHourEntry()">＋ Add Hours</button><button class="secondary" onclick="exportSelectedTimesheetExcel()">📥 Export Excel</button></div>';
    if(html.includes(add))html=html.replace(add,controls);
