@@ -435,10 +435,17 @@
    const u=currentUser();if(!u)return showLoginOverlay();
    const p=selectedPeriod(),rows=periodRows(u,p).slice().sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
    if(!rows.length)return alert('No hours to export for this pay period.');
+   const dailyTotals={},monthlyTotals={};
+   rows.forEach(x=>{
+     const day=x.date||'',month=day.slice(0,7),amount=Number(wageForEntry(x))||0;
+     dailyTotals[day]=(dailyTotals[day]||0)+amount;
+     monthlyTotals[month]=(monthlyTotals[month]||0)+amount;
+   });
    const output=rows.map(x=>{
      const segments=Array.isArray(x.segments)&&x.segments.length?x.segments:[];
      const ratePeriods=segments.length?segments.map(s=>`${s.start||''}–${s.finish||''} ${hourRateTypeLabel(s.rateType||'standard')}`).join(' | '):hourRateTypeLabel(x.rateType||'standard');
-     return {Crew:u.name,Date:x.date,Work:hourWorkLabel(x),RatePeriods:ratePeriods,Start:x.start||'',Finish:x.finish||'',Hours:Number((minutesForHourEntry(x)/60).toFixed(2)),Gross:Number(wageForEntry(x).toFixed(2)),Status:x.status||'Draft'};
+     const month=(x.date||'').slice(0,7);
+     return {Crew:u.name,Date:x.date,Work:hourWorkLabel(x),RatePeriods:ratePeriods,Start:x.start||'',Finish:x.finish||'',Hours:Number((minutesForHourEntry(x)/60).toFixed(2)),Gross:Number(wageForEntry(x).toFixed(2)),DailyTotal:Number((dailyTotals[x.date]||0).toFixed(2)),MonthlyTotal:Number((monthlyTotals[month]||0).toFixed(2)),Status:x.status||'Draft'};
    });
    const filename=`Regency_Timesheet_${p.start}_to_${p.end}`;
    if(window.XLSX){
